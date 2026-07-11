@@ -3,6 +3,8 @@
 import { useCallback, useEffect } from "react";
 import { loadActiveTripId, loadSavedTrips } from "@/lib/trip-registry";
 import { ChatThread } from "./ChatThread";
+import { CameraFeed } from "./CameraFeed";
+import { HorizontalLayout } from "./HorizontalLayout";
 import { InputBar } from "./InputBar";
 import { OrientationGuard } from "./OrientationGuard";
 import { useMagellanStore } from "./store";
@@ -41,11 +43,7 @@ export function MagellanApp() {
             inputBar={<InputBar onSend={handleSend} />}
           />
         }
-        horizontal={
-          <div className="grid h-full place-items-center bg-[#0d0d0f] text-sm text-white/70">
-            Camera mode is the next ported module.
-          </div>
-        }
+        horizontal={<HorizontalLayout cameraFeed={<CameraFeed />} glassPanel={<ChatThread compact />} />}
       />
     </main>
   );
