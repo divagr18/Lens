@@ -37,7 +37,7 @@ npm run dev:ws
 
 The focused phone test is available at `/live-test`. It streams the Android camera and microphone over a WebSocket to your laptop; the laptop owns the Gemini Live session and keeps `GEMINI_API_KEY` private.
 
-1. Copy `.env.example` to `.env.local` and set both `GEMINI_API_KEY` and a short `LIVE_TEST_TOKEN`.
+1. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`.
 2. Start the production laptop server in one terminal. This intentionally avoids Next development mode, whose hot-reload WebSocket is incompatible with a Quick Tunnel:
 
    ```bash
@@ -50,7 +50,7 @@ The focused phone test is available at `/live-test`. It streams the Android came
    npm run tunnel:phone
    ```
 
-4. Open the printed `https://*.trycloudflare.com/live-test` URL in Android Chrome, enter `LIVE_TEST_TOKEN`, and grant camera/microphone access.
+4. Open the printed `https://*.trycloudflare.com/live-test` URL in Android Chrome and grant camera/microphone access.
 
 To ask “where am I?”, request directions, or discover places by voice (for example, “good cafes on 12th Road in Indiranagar”), also set `GOOGLE_MAPS_API_KEY` to a Google Maps Platform **server** key with both **Routes API** and **Places API (New)** enabled, and keep `MAPS_FIXTURE_MODE=false`. The tunnel URL is temporary and public: do not share it or the test code. The test ends after 110 seconds, before Gemini Live's audio+video session limit.
 
@@ -62,7 +62,6 @@ Copy `.env.example` to `.env.local` and fill what you want to test:
 
 ```bash
 GEMINI_API_KEY=
-LIVE_TEST_TOKEN=
 SUPERMEMORY_API_KEY=
 GEMINI_MEMORY_MODEL=gemini-3.5-flash
 GOOGLE_MAPS_API_KEY=

@@ -1,11 +1,9 @@
-import { hasValidLiveTestToken, liveTestUnauthorizedResponse } from "@/lib/live-test-auth";
 import { translateVisual } from "@/lib/visual-translation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  if (!hasValidLiveTestToken(request)) return liveTestUnauthorizedResponse();
   try {
     const body = (await request.json()) as { imageDataUrl?: string; targetLanguage?: string };
     if (typeof body.imageDataUrl !== "string" || typeof body.targetLanguage !== "string") {

@@ -1,11 +1,9 @@
 import { validateCityGameAttempt } from "@/lib/city-games";
-import { hasValidLiveTestToken, liveTestUnauthorizedResponse } from "@/lib/live-test-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
-  if (!hasValidLiveTestToken(request)) return liveTestUnauthorizedResponse();
   try {
     const body = (await request.json()) as { gameId?: string; targetId?: string; imageDataUrl?: string };
     if (typeof body.gameId !== "string" || typeof body.targetId !== "string" || typeof body.imageDataUrl !== "string") {

@@ -97,11 +97,7 @@ const defaultTripMemory = [
 ].join("\n");
 
 export default function LiveTestPage() {
-  const [token, setToken] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return window.sessionStorage.getItem("lens-live-test-token") ?? "";
-  });
-  const [status, setStatus] = useState("Enter the temporary Live test code, then start.");
+  const [status, setStatus] = useState("Start the camera to connect.");
   const [isRunning, setIsRunning] = useState(false);
   const [hasMedia, setHasMedia] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -356,10 +352,6 @@ export default function LiveTestPage() {
   const startVisualTranslation = useCallback(
     async (requestedLanguage?: string) => {
       if (translationAbortRef.current) return;
-      if (!token.trim()) {
-        setStatus("Enter the temporary Live test code before creating a translated visual.");
-        return;
-      }
       const imageDataUrl = captureVisualStill();
       if (!imageDataUrl) {
         setStatus("Start the camera first, then point it at the text you want translated.");
@@ -376,7 +368,7 @@ export default function LiveTestPage() {
       try {
         const response = await fetch("/api/visual-translation", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-live-test-token": token.trim() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageDataUrl, targetLanguage: language }),
           signal: controller.signal,
         });
@@ -404,16 +396,12 @@ export default function LiveTestPage() {
         if (translationAbortRef.current === controller) translationAbortRef.current = undefined;
       }
     },
-    [activeTrip, captureVisualStill, sendLiveEvent, targetLanguage, token]
+    [activeTrip, captureVisualStill, sendLiveEvent, targetLanguage]
   );
 
   const startCityGame = useCallback(
     async (requestedCity?: string) => {
       if (gameBusy) return;
-      if (!token.trim()) {
-        setGameStatus("Enter the temporary Live test code before starting a game.");
-        return;
-      }
       const city = (requestedCity || gameCity || activeTrip?.destinationCity || "").trim();
       if (!city) {
         setGameStatus("Choose a city or select a saved trip before starting a game.");
@@ -424,7 +412,7 @@ export default function LiveTestPage() {
       try {
         const response = await fetch("/api/games/session", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-live-test-token": token.trim() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ city }),
         });
         const body = (await response.json().catch(() => ({}))) as { game?: CityGame; error?: string };
@@ -439,7 +427,7 @@ export default function LiveTestPage() {
         setGameBusy(false);
       }
     },
-    [activeTrip?.destinationCity, gameBusy, gameCity, sendLiveEvent, token]
+    [activeTrip?.destinationCity, gameBusy, gameCity, sendLiveEvent]
   );
 
   const captureGameTarget = useCallback(
@@ -455,7 +443,7 @@ export default function LiveTestPage() {
       try {
         const response = await fetch("/api/games/attempt", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-live-test-token": token.trim() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ gameId: cityGame.gameId, targetId: target.id, imageDataUrl }),
         });
         const body = (await response.json().catch(() => ({}))) as {
@@ -475,7 +463,7 @@ export default function LiveTestPage() {
         setGameBusy(false);
       }
     },
-    [captureVisualStill, cityGame, gameBusy, sendLiveEvent, token]
+    [captureVisualStill, cityGame, gameBusy, sendLiveEvent]
   );
 
   const closeTranslation = useCallback(() => {
@@ -584,10 +572,6 @@ export default function LiveTestPage() {
   );
 
   const startSession = useCallback(async () => {
-    if (!token.trim()) {
-      setStatus("Enter the temporary Live test code from LIVE_TEST_TOKEN first.");
-      return;
-    }
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       setStatus("Camera and microphone require the HTTPS tunnel in a modern Android browser.");
       return;
@@ -645,7 +629,6 @@ export default function LiveTestPage() {
         socket.send(
           JSON.stringify({
             type: "start",
-            token: token.trim(),
             location: phoneLocationRef.current,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             trip: activeTrip,
@@ -667,7 +650,7 @@ export default function LiveTestPage() {
     } catch (error) {
       stopSession(error instanceof Error ? error.message : "Could not start camera and microphone capture.");
     }
-  }, [activeTrip, appendAudioSamples, getInitialLocation, handleSocketMessage, startLocationWatch, stopSession, token, tripMemory]);
+  }, [activeTrip, appendAudioSamples, getInitialLocation, handleSocketMessage, startLocationWatch, stopSession, tripMemory]);
 
   useEffect(() => {
     return () => {
@@ -680,11 +663,6 @@ export default function LiveTestPage() {
       clearAssistantAudio();
     };
   }, [clearAssistantAudio, clearTimers, releaseMedia]);
-
-  function updateToken(value: string) {
-    setToken(value);
-    window.sessionStorage.setItem("lens-live-test-token", value);
-  }
 
   function selectTrip(value: string) {
     setActiveTrip(value);
@@ -723,18 +701,6 @@ export default function LiveTestPage() {
 
         <section className="rounded-xl border border-[#d7ded0] bg-[#fffef8] p-4 shadow-sm">
           <label className="grid gap-2 text-sm font-medium text-[#4f5b50]">
-            Temporary Live test code
-            <input
-              className="h-11 rounded-md border border-[#cbd5c7] bg-white px-3 text-[#17201a] outline-none focus:border-[#2f6f73]"
-              type="password"
-              autoComplete="off"
-              value={token}
-              onChange={(event) => updateToken(event.target.value)}
-              disabled={isRunning}
-              placeholder="Matches LIVE_TEST_TOKEN on the laptop"
-            />
-          </label>
-          <label className="mt-3 grid gap-2 text-sm font-medium text-[#4f5b50]">
             Saved trip for memory
             <select
               className="h-11 rounded-md border border-[#cbd5c7] bg-white px-3 text-[#17201a] outline-none focus:border-[#2f6f73]"

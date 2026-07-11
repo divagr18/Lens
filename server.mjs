@@ -14,7 +14,6 @@ const hostname = process.env.HOSTNAME || "localhost";
 const port = Number.parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
-const handle = app.getRequestHandler();
 const wss = new WebSocketServer({ noServer: true });
 const liveTestDurationMs = 110_000;
 const maxAudioPayloadLength = 32_000;
@@ -110,6 +109,10 @@ function sendJson(ws, payload) {
 }
 
 await app.prepare();
+// Access the prepared request handler directly. `getRequestHandler()` also
+// installs an upgrade listener; this server routes upgrades itself so Next HMR
+// and Lens Live cannot race to handle the same socket.
+const handle = app.requestHandler;
 
 const server = createServer((req, res) => {
   handle(req, res);
@@ -262,10 +265,6 @@ function attachRealtimeLiveSession(ws) {
     if (payload.type === "start") {
       if (session) {
         sendJson(ws, { type: "error", code: "already-started", message: "A Live test session is already running." });
-        return;
-      }
-      if (!process.env.LIVE_TEST_TOKEN || payload.token !== process.env.LIVE_TEST_TOKEN) {
-        sendJson(ws, { type: "error", code: "unauthorized", message: "The Live test code is missing or incorrect." });
         return;
       }
       if (!process.env.GEMINI_API_KEY) {
@@ -427,6 +426,23 @@ function attachRealtimeLiveSession(ws) {
 
     if (!session || stopping) {
       sendJson(ws, { type: "error", code: "not-ready", message: "Start a Live test session before sending media." });
+      return;
+    }
+
+    if (payload.type === "text") {
+      if (typeof payload.text !== "string" || !payload.text.trim() || payload.text.length > 4_000) {
+        sendJson(ws, { type: "error", code: "invalid-text", message: "Text input was missing or too long." });
+        return;
+      }
+      try {
+        session.sendRealtimeInput({ text: payload.text.trim() });
+      } catch (error) {
+        sendJson(ws, {
+          type: "error",
+          code: "text-forward-failed",
+          message: error instanceof Error ? error.message : "Could not forward text to Gemini Live.",
+        });
+      }
       return;
     }
 
@@ -697,7 +713,9 @@ function buildLiveSystemInstruction(tripMemory) {
 server.on("upgrade", (req, socket, head) => {
   const { pathname } = new URL(req.url || "/", `http://${req.headers.host}`);
   if (pathname !== "/api/live" && pathname !== "/api/live/realtime") {
-    socket.destroy();
+    // Next owns its development HMR socket (/_next/webpack-hmr) and any future
+    // framework upgrade paths. Rejecting these here breaks hot reload.
+    void app.upgradeHandler(req, socket, head);
     return;
   }
 
