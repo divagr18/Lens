@@ -19,6 +19,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { saveTripToRegistry } from "@/lib/trip-registry";
 import type { FormEvent, ReactNode } from "react";
 import { defaultTrip } from "@/lib/travel-types";
 import type {
@@ -90,7 +91,7 @@ export default function Home() {
   const [artifacts, setArtifacts] = useState<TravelArtifact[]>([]);
   const [artifactState, setArtifactState] = useState<MapsApiState>({
     status: "idle",
-    message: "Save a trip, then create an Omni Flash visual card or Gemma text summary.",
+    message: "Save a trip, then create an Omni Flash visual card or Gemini text summary.",
   });
   const [artifactType, setArtifactType] =
     useState<ArtifactType>("route_card");
@@ -157,6 +158,7 @@ export default function Home() {
       memory: MemoryApiState;
     };
     setTrip(body.trip);
+    saveTripToRegistry(body.trip);
     setMemoryState(body.memory);
   }
 
@@ -1080,7 +1082,7 @@ function EmptyCard() {
         <Languages size={17} />
         No artifact yet
       </div>
-      Create an Omni Flash visual card or a LiteRT/Gemma text summary after saving a trip.
+      Create an Omni Flash visual card or a Gemini 3.5 Flash text summary after saving a trip.
     </article>
   );
 }
@@ -1110,12 +1112,12 @@ function artifactLabel(type: ArtifactType) {
 }
 
 function artifactRuntime(type: ArtifactType): TravelArtifact["runtime"] {
-  return type === "booking_summary" ? "litert-lm" : "gemini-omni-flash";
+  return type === "booking_summary" ? "gemini-3.5-flash" : "gemini-omni-flash";
 }
 
 function artifactTargetMessage(type: ArtifactType) {
   if (type === "booking_summary") {
-    return "Sending booking summary to the LiteRT/Gemma text adapter.";
+    return "Sending booking summary to Gemini 3.5 Flash.";
   }
   return "Sending visual travel card request to Gemini Omni Flash. This can take a little while.";
 }

@@ -127,9 +127,8 @@ export type TravelArtifact = {
   status: RuntimeStatus;
   runtime:
     | "gemini-omni-flash"
+    | "gemini-3.5-flash"
     | "omni-disabled"
-    | "litert-lm"
-    | "local-disabled";
   media?: {
     kind: "video";
     mimeType: string;

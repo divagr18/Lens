@@ -29,7 +29,7 @@ export async function createOmniVisualArtifact(
       type: request.type,
       title: "Omni Flash visual layer disabled",
       body:
-        "Set OMNI_FLASH_ENABLED=true and GEMINI_API_KEY to create visual/audio travel outputs with Gemini Omni Flash. This task was not routed to Gemma.",
+        "Set OMNI_FLASH_ENABLED=true and GEMINI_API_KEY to create visual/audio travel outputs with Gemini Omni Flash.",
       status: "disabled",
       runtime: "omni-disabled",
       createdAt: now,
@@ -42,7 +42,7 @@ export async function createOmniVisualArtifact(
       type: request.type,
       title: "Omni Flash API key missing",
       body:
-        "GEMINI_API_KEY is not set. Visual travel card creation requires Gemini Omni Flash and was not routed to Gemma.",
+        "GEMINI_API_KEY is not set. Visual travel card creation requires Gemini Omni Flash.",
       status: "missing-api-key",
       runtime: "omni-disabled",
       createdAt: now,
