@@ -11,10 +11,12 @@ import { randomUUID } from "node:crypto";
 
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby";
+const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const ROUTE_FIELD_MASK =
   "routes.duration,routes.distanceMeters,routes.localizedValues,routes.legs.steps";
 const NEARBY_FIELD_MASK =
   "places.id,places.displayName,places.types,places.formattedAddress,places.location,places.googleMapsUri";
+const TEXT_SEARCH_FIELD_MASK = NEARBY_FIELD_MASK;
 const NEARBY_TYPES = [
   "subway_station",
   "train_station",
@@ -235,24 +237,89 @@ export async function searchNearby(
     }
 
     const data = (await res.json()) as GoogleNearbyResponse;
-    return (data.places ?? []).map((place) => ({
-      id: place.id || place.displayName?.text || randomUUID(),
-      displayName: place.displayName?.text || "Unnamed place",
-      types: place.types ?? [],
-      formattedAddress: place.formattedAddress,
-      location:
-        typeof place.location?.latitude === "number" &&
-        typeof place.location.longitude === "number"
-          ? {
-              lat: place.location.latitude,
-              lng: place.location.longitude,
-              label: place.displayName?.text || "Nearby place",
-            }
-          : undefined,
-      googleMapsUrl: place.googleMapsUri,
-    }));
+    return (data.places ?? []).map(toNearbyPlace);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : "Nearby search failed.");
+    return [];
+  }
+}
+
+export async function findPlaceByText(
+  query: string,
+  origin?: GeoPoint,
+  errors: string[] = [],
+  providedAuth?: Extract<MapsAuth, { headers: Record<string, string> }>
+): Promise<NearbyPlace | undefined> {
+  return (await searchPlacesByText(query, origin, errors, providedAuth))[0];
+}
+
+export async function searchPlacesByText(
+  query: string,
+  origin?: GeoPoint,
+  errors: string[] = [],
+  providedAuth?: Extract<MapsAuth, { headers: Record<string, string> }>
+): Promise<NearbyPlace[]> {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    errors.push("A destination name is required.");
+    return [];
+  }
+  if (fixtureMode()) {
+    return [
+      {
+        id: "fixture-destination",
+        displayName: normalizedQuery,
+        types: ["point_of_interest"],
+        formattedAddress: "Fixture destination for Bengaluru testing",
+        location: origin
+          ? { lat: origin.lat + 0.01, lng: origin.lng + 0.01, label: normalizedQuery }
+          : undefined,
+      },
+    ];
+  }
+
+  const auth = providedAuth ?? (await mapsAuth());
+  if ("error" in auth) {
+    errors.push(auth.error);
+    return [];
+  }
+
+  try {
+    const res = await fetch(TEXT_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
+        ...auth.headers,
+      },
+      body: JSON.stringify({
+        textQuery: normalizedQuery,
+        languageCode: languageCode(),
+        ...(origin
+          ? {
+              locationBias: {
+                circle: {
+                  center: { latitude: origin.lat, longitude: origin.lng },
+                  radius: 50_000,
+                },
+              },
+            }
+          : {}),
+      }),
+    });
+    if (!res.ok) {
+      errors.push(await responseMessage(res, auth.mode));
+      return [];
+    }
+
+    const places = ((await res.json()) as GoogleNearbyResponse).places ?? [];
+    if (!places.length) {
+      errors.push(`No place matched “${normalizedQuery}”.`);
+      return [];
+    }
+    return places.map(toNearbyPlace);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Place text search failed.");
     return [];
   }
 }
@@ -542,6 +609,25 @@ function fixtureNearby(origin: GeoPoint): NearbyPlace[] {
       },
     },
   ];
+}
+
+function toNearbyPlace(place: NonNullable<GoogleNearbyResponse["places"]>[number]): NearbyPlace {
+  return {
+    id: place.id || place.displayName?.text || randomUUID(),
+    displayName: place.displayName?.text || "Unnamed place",
+    types: place.types ?? [],
+    formattedAddress: place.formattedAddress,
+    location:
+      typeof place.location?.latitude === "number" &&
+      typeof place.location.longitude === "number"
+        ? {
+            lat: place.location.latitude,
+            lng: place.location.longitude,
+            label: place.displayName?.text || "Nearby place",
+          }
+        : undefined,
+    googleMapsUrl: place.googleMapsUri,
+  };
 }
 
 function metersText(meters?: number) {

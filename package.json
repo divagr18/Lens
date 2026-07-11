@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:ws": "node server.mjs",
+    "dev:ws": "node server.mjs --dev",
+    "tunnel:phone": "npx wrangler tunnel quick-start http://localhost:3000",
     "build": "next build",
     "start": "next start",
     "start:ws": "node server.mjs",
+    "start:phone": "npm run build && node server.mjs",
+    "test:memory": "node --test live-memory.test.mjs",
     "lint": "eslint"
   },
   "dependencies": {
