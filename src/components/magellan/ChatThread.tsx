@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { MemorySheet } from "./MemorySheet";
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { useMagellanStore } from "./store";
 import { TripSelector } from "./TripSelector";
@@ -28,6 +29,7 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
 
   return (
     <section className={`chat-thread ${compact ? "chat-thread--compact" : ""}`} aria-label="Conversation">
+      {!compact && <MemorySheet />}
       {messages.length === 0 && !liveTranscription ? (
         <div className="chat-thread__empty" aria-live="polite">
           {!compact && <><span className="chat-thread__welcome">Welcome to</span><TripSelector /></>}
