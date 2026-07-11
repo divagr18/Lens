@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { loadActiveTripId, loadSavedTrips } from "@/lib/trip-registry";
+import { ensureDefaultTripRegistry, loadActiveTripId } from "@/lib/trip-registry";
 import type { TripProfile } from "@/lib/travel-types";
 import { ChatThread } from "./ChatThread";
 import { CameraFeed } from "./CameraFeed";
@@ -28,7 +28,9 @@ export function MagellanApp() {
   const cityGame = useMagellanStore((state) => state.cityGame);
   const setCityGame = useMagellanStore((state) => state.setCityGame);
   const setGameNotice = useMagellanStore((state) => state.setGameNotice);
-  const [tripProfiles] = useState<TripProfile[]>(() => loadSavedTrips());
+  const setGamePageOpen = useMagellanStore((state) => state.setGamePageOpen);
+  const setCameraActive = useMagellanStore((state) => state.setCameraActive);
+  const [tripProfiles] = useState<TripProfile[]>(() => ensureDefaultTripRegistry());
   const videoRef = useRef<HTMLVideoElement>(null);
   const gameRequestRef = useRef<string | undefined>(undefined);
   const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
@@ -183,6 +185,8 @@ export function MagellanApp() {
           if (!liveIsReady) void startLive();
         }}
         onCloseLive={() => {
+          setGamePageOpen(false);
+          setCameraActive(false);
           if (liveIsReady) stopLive("Live camera closed.");
         }}
         vertical={

@@ -3,7 +3,7 @@
 import { Camera, Gamepad2, Languages, Mic, Square, Volume2, VolumeX, Wifi, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TripProfile } from "@/lib/travel-types";
-import { loadActiveTripId, loadSavedTrips, setActiveTripId } from "@/lib/trip-registry";
+import { ensureDefaultTripRegistry, loadActiveTripId, setActiveTripId } from "@/lib/trip-registry";
 
 type SocketMessage =
   | { type: "connected"; transport: string }
@@ -110,7 +110,7 @@ export default function LiveTestPage() {
     if (typeof window === "undefined") return defaultTripMemory;
     return window.localStorage.getItem("lens-live-trip-memory") ?? defaultTripMemory;
   });
-  const [savedTrips] = useState<TripProfile[]>(() => loadSavedTrips());
+  const [savedTrips] = useState<TripProfile[]>(() => ensureDefaultTripRegistry());
   const [activeTripId, setActiveTrip] = useState(() => loadActiveTripId());
   const [memoryStatus, setMemoryStatus] = useState("Select a saved trip to enable automatic memory updates.");
   const [targetLanguage, setTargetLanguage] = useState(() =>

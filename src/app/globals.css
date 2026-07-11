@@ -341,9 +341,9 @@ textarea {
 
 .chat-thread--compact .chat-thread__messages { padding: 1.25rem 0.85rem; gap: 0.55rem; }
 .chat-thread--compact .chat-bubble { max-width: 100%; padding: 0.6rem 0.7rem; font-size: 0.82rem; }
-.chat-thread--compact .chat-bubble--user { background: linear-gradient(135deg, rgb(79 70 229 / 0.9), rgb(124 58 237 / 0.9)); color: #fff; border-color: rgb(255 255 255 / 0.1); box-shadow: none; }
-.chat-thread--compact .chat-bubble--assistant { background: rgb(27 27 32 / 0.78); color: #e2e8f0; border-color: rgb(255 255 255 / 0.1); box-shadow: none; }
-.chat-thread--compact .live-transcription { background: rgb(255 255 255 / 0.1); color: #e2e8f0; }
+.chat-thread--compact .chat-bubble--user { background: rgb(152 113 76 / 0.9); color: #fffaf5; border-color: rgb(255 239 220 / 0.18); box-shadow: none; }
+.chat-thread--compact .chat-bubble--assistant { background: rgb(70 52 39 / 0.78); color: #f8eee4; border-color: rgb(255 235 214 / 0.14); box-shadow: none; }
+.chat-thread--compact .live-transcription { background: rgb(72 54 42 / 0.52); color: #f8eee4; }
 
 .live-transcription {
   align-self: flex-end;

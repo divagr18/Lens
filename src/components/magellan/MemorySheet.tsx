@@ -2,7 +2,7 @@
 
 import { Brain, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { loadSavedTrips } from "@/lib/trip-registry";
+import { ensureDefaultTripRegistry } from "@/lib/trip-registry";
 import type { MemoryContext, TripProfile } from "@/lib/travel-types";
 import { useMagellanStore } from "./store";
 
@@ -16,7 +16,7 @@ export function MemorySheet({ inline = false }: { inline?: boolean }) {
   const activeTripId = useMagellanStore((state) => state.activeTripId);
   const [isOpen, setIsOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<SnapshotState>({ kind: "idle" });
-  const trip = loadSavedTrips().find((candidate) => candidate.id === activeTripId);
+  const trip = ensureDefaultTripRegistry().find((candidate) => candidate.id === activeTripId);
 
   const loadMemory = useCallback(async () => {
     if (!trip) {
@@ -118,13 +118,19 @@ export function MemorySheet({ inline = false }: { inline?: boolean }) {
 
 function MemoryGroups({ memory, trip }: { memory: MemoryContext; trip?: TripProfile }) {
   const groups = [
+    { label: "Trip memory", facts: tripFacts(trip) },
     { label: "Profile", facts: uniqueFacts(memory.profileStatic) },
     { label: "Current context", facts: uniqueFacts(memory.profileDynamic) },
     { label: "Saved trip facts", facts: uniqueFacts(memory.memories) },
   ].filter((group) => group.facts.length);
 
   if (!memory.available) {
-    return <p className="rounded-2xl border border-[#b99078]/25 bg-[#f6ece4] p-4 text-sm leading-6 text-[#735642]">{memory.message}</p>;
+    return (
+      <div className="space-y-4">
+        {groups.length > 0 && <MemoryGroupList groups={groups} />}
+        <p className="rounded-2xl border border-[#b99078]/25 bg-[#f6ece4] p-4 text-sm leading-6 text-[#735642]">{memory.message}</p>
+      </div>
+    );
   }
 
   if (!groups.length) {
@@ -136,6 +142,10 @@ function MemoryGroups({ memory, trip }: { memory: MemoryContext; trip?: TripProf
     );
   }
 
+  return <MemoryGroupList groups={groups} />;
+}
+
+function MemoryGroupList({ groups }: { groups: Array<{ label: string; facts: string[] }> }) {
   return (
     <div className="space-y-5">
       {groups.map((group) => (
@@ -150,6 +160,16 @@ function MemoryGroups({ memory, trip }: { memory: MemoryContext; trip?: TripProf
       ))}
     </div>
   );
+}
+
+function tripFacts(trip?: TripProfile) {
+  if (!trip) return [];
+  return uniqueFacts([
+    trip.dietaryRules && `Diet: ${trip.dietaryRules}`,
+    trip.budget && `Budget: ${trip.budget}`,
+    trip.dates && `Dates: ${trip.dates}`,
+    trip.itinerary && `Plan: ${trip.itinerary}`,
+  ].filter((fact): fact is string => Boolean(fact)));
 }
 
 function uniqueFacts(facts: string[]) {

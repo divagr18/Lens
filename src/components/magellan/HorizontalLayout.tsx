@@ -160,7 +160,7 @@ export function HorizontalLayout({
       </div>
 
       <aside className="pointer-events-none absolute bottom-4 right-4 top-4 z-10 flex w-[28%] min-w-[14rem] max-w-[24rem] flex-col overflow-hidden rounded-[36px]">
-        <div className="glass-panel pointer-events-auto min-h-0 flex-1 overflow-hidden rounded-[36px]">{glassPanel}</div>
+        <div className="pointer-events-auto min-h-0 flex-1 overflow-hidden rounded-[36px]">{glassPanel}</div>
       </aside>
 
       <div className="absolute bottom-7 left-7 z-20 flex flex-col items-center">

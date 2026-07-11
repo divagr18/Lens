@@ -49,6 +49,7 @@ export function useLensLiveSession({
   const audioSampleCountRef = useRef(0);
   const readyRef = useRef(false);
   const setConnected = useMagellanStore((state) => state.setConnected);
+  const setCameraActive = useMagellanStore((state) => state.setCameraActive);
   const setVoiceActive = useMagellanStore((state) => state.setVoiceActive);
   const setLiveTranscription = useMagellanStore((state) => state.setLiveTranscription);
   const addMessage = useMagellanStore((state) => state.addMessage);
@@ -85,12 +86,14 @@ export function useLensLiveSession({
       clearAssistantAudio();
       releaseMedia();
       setConnected(false);
+      setCameraActive(false);
       setVoiceActive(false);
+      setLiveTranscription("");
       setIsGenerating(false);
       setIsReady(false);
       setStatus(reason);
     },
-    [clearAssistantAudio, releaseMedia, setConnected, setIsGenerating, setVoiceActive]
+    [clearAssistantAudio, releaseMedia, setCameraActive, setConnected, setIsGenerating, setLiveTranscription, setVoiceActive]
   );
 
   const sendJson = useCallback((payload: Record<string, unknown>) => {
