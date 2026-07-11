@@ -16,7 +16,9 @@ flowchart LR
   Maps --> Places["Google Places API"]
   Live --> Gemini["Gemini Live API"]
   Artifacts --> Omni["Gemini Omni Flash"]
-  Artifacts --> LiteRT["LiteRT-LM / Gemma Adapter"]
+  Artifacts --> Flash["Gemini 3.5 Flash"]
+  UI --> Translation["Nano Banana 2 Translate Lens"]
+  UI --> Games["City Game APIs"]
 
   Maps --> Live
   Trips --> Live
@@ -32,7 +34,7 @@ It has five working areas:
 - **Video Replay**: uploaded clips are played locally and sampled into 768x768 JPEG frames at 1 FPS.
 - **Live Assistant**: sends the current frame, user question, trip id, memory context, and route context into the live turn flow.
 - **Location + Route Context**: manual Bengaluru presets, transit-first route refresh, nearby places, and Maps status.
-- **Memory Evidence / Travel Cards**: shows Supermemory snippets, Maps evidence, Omni Flash visual cards, and local Gemma text output.
+- **Memory Evidence / Travel Cards**: shows Supermemory snippets, Maps evidence, Omni Flash visual cards, and Gemini 3.5 Flash text summaries.
 
 ## Backend APIs
 
@@ -42,7 +44,9 @@ All regular APIs use Next App Router route handlers.
 - `POST /api/trips/:tripId/memories`: stores additional trip memory.
 - `POST /api/trips/:tripId/query-context`: retrieves Supermemory context.
 - `POST /api/live/turn`: retrieves memory and sends the visual/text turn to Gemini Live.
-- `POST /api/artifacts`: routes visual/video card requests to Gemini Omni Flash and text summary requests to the local Gemma/LiteRT boundary.
+- `POST /api/artifacts`: routes visual/video card requests to Gemini Omni Flash and booking summaries to Gemini 3.5 Flash.
+- `POST /api/visual-translation`: analyzes a deliberate phone capture with Gemini 3.5 Flash and renders a translated visual copy with Nano Banana 2.
+- `POST /api/games/session` and `POST /api/games/attempt`: create and validate session-scoped public city photo hunts.
 - `POST /api/maps/context`: returns combined route, nearby places, and Maps evidence.
 - `POST /api/maps/route`: calls Google Routes API.
 - `POST /api/maps/nearby`: calls Google Places Nearby Search.
@@ -92,7 +96,7 @@ The Gemini prompt includes:
 - route and nearby-place context
 - current timestamp/question
 
-No silent fallback is used. If Gemini, Supermemory, Maps, or local model keys are missing, the UI reports that directly.
+No silent fallback is used. If Gemini, Supermemory, or Maps keys are missing, the UI reports that directly.
 
 ## Artifact Boundaries
 
@@ -103,7 +107,6 @@ Current behavior:
 - Visual travel artifacts use Omni Flash: phrase cards, route cards, menu explainers, etiquette notes, and alerts.
 - If `OMNI_FLASH_ENABLED=false`, visual artifact creation returns an explicit disabled card.
 - If enabled but `GEMINI_API_KEY` is missing, the UI reports the missing key.
-- Visual generation is never silently routed to Gemma.
 
 Intended Omni Flash tasks:
 
@@ -113,21 +116,11 @@ Intended Omni Flash tasks:
 - etiquette notes
 - travel alerts
 
-## Local Model Boundary
+## Cloud Text and Visual Generation
 
-`src/lib/local-model.ts` defines the LiteRT-LM/Gemma artifact boundary.
-
-Current behavior:
-
-- If `LOCAL_MODEL_ENABLED=false`, text artifact creation returns an explicit disabled card.
-- If enabled but `LITERT_MODEL_PATH` is missing, the UI reports not configured.
-- It does not silently call Gemini or Omni Flash for local text tasks.
-
-Intended future tasks for Gemma:
-
-- booking summaries
-- privacy filtering
-- offline translation drafts
+- Booking summaries use Gemini 3.5 Flash.
+- The phone Translate Lens uses Gemini 3.5 Flash for structured extraction and Nano Banana 2 for faithful visual editing after an explicit camera capture.
+- City games use Gemini 3.5 Flash for quest generation and one-off photo validation. Attempt images are not retained.
 
 ## Environment
 
@@ -143,9 +136,10 @@ GOOGLE_MAPS_SERVICE_ACCOUNT_JSON=
 MAPS_FIXTURE_MODE=false
 MAPS_DEFAULT_LANGUAGE=en-IN
 MAPS_DEFAULT_UNITS=METRIC
-LOCAL_MODEL_ENABLED=false
-LITERT_MODEL_PATH=
 GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
+GEMINI_MEMORY_MODEL=gemini-3.5-flash
+GEMINI_IMAGE_MODEL=gemini-3.1-flash-image
+GEMINI_GAME_MODEL=gemini-3.5-flash
 OMNI_FLASH_ENABLED=false
 OMNI_FLASH_MODEL=gemini-omni-flash-preview
 ```
@@ -177,7 +171,7 @@ npm run dev:ws
 
 ## Test Scenarios
 
-- **No keys**: app should show visible disabled states for Supermemory, Gemini Live, Omni Flash, Maps, and local Gemma.
+- **No keys**: app should show visible disabled states for Supermemory, Gemini Live, Omni Flash, Maps, visual translation, and city games.
 - **Maps fixture**: set `MAPS_FIXTURE_MODE=true`, refresh route context, and verify the fixture route card appears.
 - **Real Maps**: set `GOOGLE_MAPS_API_KEY`, refresh Indiranagar Metro to Cubbon Park, and verify ETA, distance, next step, nearby places, and Maps evidence.
 - **Live context**: save trip, refresh route context, upload a clip or use an empty frame, ask "Which way now?", and confirm the answer includes memory and route context.

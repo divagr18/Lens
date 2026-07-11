@@ -1,6 +1,6 @@
 # Lens Travel Cockpit
 
-PC-first prototype for a context-aware AI travel companion. It tests the core product loop with uploaded travel/vlog clips, persistent trip memory, live visual questions, Omni Flash visual artifacts, and local/offline text boundaries.
+PC-first prototype for a context-aware AI travel companion. It tests the core product loop with uploaded travel/vlog clips, persistent trip memory, live visual questions, cloud visual artifacts, and a phone-first Live test surface.
 
 ## What is implemented
 
@@ -9,8 +9,9 @@ PC-first prototype for a context-aware AI travel companion. It tests the core pr
 - Supermemory Cloud adapter for trip memory ingestion and profile/search context retrieval.
 - Google Routes and Places adapters for Bengaluru route context, manual location presets, nearby places, and visible Maps evidence.
 - Gemini Live adapter for real visual turns when `GEMINI_API_KEY` is present.
-- Gemini Omni Flash adapter boundary for visual/video travel cards. It reports disabled/not configured instead of silently routing visual generation to Gemma.
-- LiteRT-LM/Gemma adapter boundary for offline text artifacts like booking summaries. It reports disabled/not configured instead of silently falling back to a cloud model.
+- Gemini Omni Flash adapter boundary for visual/video travel cards.
+- Gemini 3.5 Flash cloud summaries, visual translation analysis, and city-game orchestration.
+- Nano Banana 2 image editing for on-demand translated visual copies.
 - Optional custom WebSocket server for `/api/live`; stock Next dev uses the HTTP live-turn fallback.
 
 ## Run
@@ -32,13 +33,38 @@ For the optional WebSocket proxy:
 npm run dev:ws
 ```
 
+## Android Gemini Live test
+
+The focused phone test is available at `/live-test`. It streams the Android camera and microphone over a WebSocket to your laptop; the laptop owns the Gemini Live session and keeps `GEMINI_API_KEY` private.
+
+1. Copy `.env.example` to `.env.local` and set both `GEMINI_API_KEY` and a short `LIVE_TEST_TOKEN`.
+2. Start the production laptop server in one terminal. This intentionally avoids Next development mode, whose hot-reload WebSocket is incompatible with a Quick Tunnel:
+
+   ```bash
+   npm run start:phone
+   ```
+
+3. Start an HTTPS tunnel in a second terminal:
+
+   ```bash
+   npm run tunnel:phone
+   ```
+
+4. Open the printed `https://*.trycloudflare.com/live-test` URL in Android Chrome, enter `LIVE_TEST_TOKEN`, and grant camera/microphone access.
+
+To ask “where am I?”, request directions, or discover places by voice (for example, “good cafes on 12th Road in Indiranagar”), also set `GOOGLE_MAPS_API_KEY` to a Google Maps Platform **server** key with both **Routes API** and **Places API (New)** enabled, and keep `MAPS_FIXTURE_MODE=false`. The tunnel URL is temporary and public: do not share it or the test code. The test ends after 110 seconds, before Gemini Live's audio+video session limit.
+
+`npm run dev:ws` remains available for laptop-only development, but do not use it through the phone tunnel.
+
 ## Environment
 
 Copy `.env.example` to `.env.local` and fill what you want to test:
 
 ```bash
 GEMINI_API_KEY=
+LIVE_TEST_TOKEN=
 SUPERMEMORY_API_KEY=
+GEMINI_MEMORY_MODEL=gemini-3.5-flash
 GOOGLE_MAPS_API_KEY=
 GOOGLE_MAPS_AUTH_MODE=auto
 GOOGLE_MAPS_OAUTH_TOKEN=
@@ -48,16 +74,17 @@ GOOGLE_MAPS_SERVICE_ACCOUNT_JSON=
 MAPS_FIXTURE_MODE=false
 MAPS_DEFAULT_LANGUAGE=en-IN
 MAPS_DEFAULT_UNITS=METRIC
-LOCAL_MODEL_ENABLED=false
-LITERT_MODEL_PATH=
 GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
+GEMINI_MEMORY_MODEL=gemini-3.5-flash
+GEMINI_IMAGE_MODEL=gemini-3.1-flash-image
+GEMINI_GAME_MODEL=gemini-3.5-flash
 OMNI_FLASH_ENABLED=false
 OMNI_FLASH_MODEL=gemini-omni-flash-preview
 ```
 
 Missing keys are intentionally visible in the UI.
 
-Visual card generation uses Gemini Omni Flash when `OMNI_FLASH_ENABLED=true` and `GEMINI_API_KEY` is set. Gemma/LiteRT remains scoped to local/private text tasks.
+Visual card generation uses Gemini Omni Flash when `OMNI_FLASH_ENABLED=true` and `GEMINI_API_KEY` is set. Booking summaries use Gemini 3.5 Flash. The phone Translate Lens uses Nano Banana 2 only after a deliberate capture, while city games use one-off Gemini 3.5 Flash vision checks and do not retain photos.
 
 ## Maps testing
 
