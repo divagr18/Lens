@@ -1,94 +1,102 @@
-# Lens Travel Cockpit
+# Magellan Lens
 
-PC-first prototype for a context-aware AI travel companion. It tests the core product loop with uploaded travel/vlog clips, persistent trip memory, live visual questions, cloud visual artifacts, and a phone-first Live test surface.
+Magellan Lens is a phone-first AI travel companion built for a hackathon. It combines Magellan's travel-chat interface with Lens's server-side Gemini Live backend.
 
-## What is implemented
+The product has two intentional modes:
 
-- Next.js TypeScript cockpit with four work areas: trip setup, uploaded video replay, live assistant, and travel cards.
-- 1 FPS replay frame capture from uploaded clips, using a 768x768 JPEG frame shape suitable for Gemini Live.
-- Supermemory Cloud adapter for trip memory ingestion and profile/search context retrieval.
-- Google Routes and Places adapters for Bengaluru route context, manual location presets, nearby places, and visible Maps evidence.
-- Gemini Live adapter for real visual turns when `GEMINI_API_KEY` is present.
-- Gemini Omni Flash adapter boundary for visual/video travel cards.
-- Gemini 3.5 Flash cloud summaries, visual translation analysis, and city-game orchestration.
-- Nano Banana 2 image editing for on-demand translated visual copies.
-- Optional custom WebSocket server for `/api/live`; stock Next dev uses the HTTP live-turn fallback.
+- **Portrait chat** is a normal Gemini Flash travel chat. It does not open the camera.
+- **Landscape Lens** is an explicit Gemini Live camera and voice session, with GPS-aware maps, weather, memory, translated visuals, city finds, and TimeLens historical reconstructions.
 
-## Run
+## What it does
+
+- Keeps durable trip/profile facts in Supermemory and curates new explicit facts from final Live transcript turns.
+- Starts with a local default trip memory: vegetarian, Rs 2,500/day, July 11–13, and Indiranagar cafe exploration.
+- Uses Google Places and Routes tools for location, nearby recommendations, and budget/mobility-aware directions.
+- Uses weather and current-time tools for practical travel advice.
+- Captures menus, signs, notices, placards, timetables, storefronts, and packaging; Gemini Flash reads the text and Nano Banana 2 renders a translated visual copy.
+- Runs safe, city-specific visual scavenger hunts. Quest templates are cached per city for 24 hours while progress stays session-specific.
+- Generates short, clearly labeled TimeLens historical reconstructions through Gemini Omni Flash when explicitly requested. These are illustrative, non-graphic reconstructions with an educational voiceover, never archival footage.
+
+## Architecture
+
+```
+Android Chrome / desktop browser
+  ├─ Portrait: /api/chat → Gemini 3.5 Flash
+  └─ Landscape: WebSocket /api/live/realtime → Gemini Live
+       ├─ Google Places + Routes
+       ├─ Weather + current time
+       ├─ Supermemory retrieval + async memory curator
+       ├─ /api/visual-translation → Flash + Nano Banana 2
+       ├─ /api/games/* → Gemini 3.5 Flash
+       └─ /api/historical-video → Gemini Omni Flash
+```
+
+The browser never receives `GEMINI_API_KEY`. All model, Maps, and Supermemory calls run on the laptop/server.
+
+## Run locally
 
 ```bash
 npm install
-npm run dev
-```
-
-Open `http://localhost:3000`, or set `PORT=3001` if 3000 is in use.
-
-```bash
-npm run dev -- -p 3001
-```
-
-For the optional WebSocket proxy:
-
-```bash
+Copy-Item .env.example .env.local
 npm run dev:ws
 ```
 
-## Android Gemini Live test
+Open [http://localhost:3000](http://localhost:3000). The custom server is required for the Gemini Live WebSocket endpoint.
 
-The focused phone test is available at `/live-test`. It streams the Android camera and microphone over a WebSocket to your laptop; the laptop owns the Gemini Live session and keeps `GEMINI_API_KEY` private.
-
-1. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`.
-2. Start the production laptop server in one terminal. This intentionally avoids Next development mode, whose hot-reload WebSocket is incompatible with a Quick Tunnel:
-
-   ```bash
-   npm run start:phone
-   ```
-
-3. Start an HTTPS tunnel in a second terminal:
-
-   ```bash
-   npm run tunnel:phone
-   ```
-
-4. Open the printed `https://*.trycloudflare.com/live-test` URL in Android Chrome and grant camera/microphone access.
-
-To ask “where am I?”, request directions, or discover places by voice (for example, “good cafes on 12th Road in Indiranagar”), also set `GOOGLE_MAPS_API_KEY` to a Google Maps Platform **server** key with both **Routes API** and **Places API (New)** enabled, and keep `MAPS_FIXTURE_MODE=false`. The tunnel URL is temporary and public: do not share it or the test code. The test ends after 110 seconds, before Gemini Live's audio+video session limit.
-
-`npm run dev:ws` remains available for laptop-only development, but do not use it through the phone tunnel.
-
-## Environment
-
-Copy `.env.example` to `.env.local` and fill what you want to test:
+For a production-like local run:
 
 ```bash
+npm run start:phone
+```
+
+## Test on Android
+
+Camera and microphone require a secure origin. With the server running, open a second terminal:
+
+```bash
+npm run tunnel:phone
+```
+
+Open the resulting `https://*.trycloudflare.com` URL in Android Chrome. Tap the camera control to enter the Live Lens, grant camera/microphone/location permissions, and use the home control to return to portrait chat and stop Live.
+
+Quick Tunnels are temporary and public. Treat the URL as test-only.
+
+## Configuration
+
+Create `.env.local`; it is ignored by Git.
+
+```bash
+# Required for Gemini chat, Live, translation, games, and TimeLens.
 GEMINI_API_KEY=
+
+# Optional memory persistence/retrieval.
 SUPERMEMORY_API_KEY=
-GEMINI_MEMORY_MODEL=gemini-3.5-flash
+
+# Optional Maps/Routes tool calling.
 GOOGLE_MAPS_API_KEY=
-GOOGLE_MAPS_AUTH_MODE=auto
-GOOGLE_MAPS_OAUTH_TOKEN=
-GOOGLE_MAPS_OAUTH_SCOPES=https://www.googleapis.com/auth/maps-platform
-# Optional alternative to GOOGLE_APPLICATION_CREDENTIALS:
-GOOGLE_MAPS_SERVICE_ACCOUNT_JSON=
 MAPS_FIXTURE_MODE=false
-MAPS_DEFAULT_LANGUAGE=en-IN
-MAPS_DEFAULT_UNITS=METRIC
+
+# Model defaults.
 GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
 GEMINI_MEMORY_MODEL=gemini-3.5-flash
 GEMINI_IMAGE_MODEL=gemini-3.1-flash-image
 GEMINI_GAME_MODEL=gemini-3.5-flash
-OMNI_FLASH_ENABLED=false
-OMNI_FLASH_MODEL=gemini-omni-flash-preview
+GEMINI_HISTORICAL_VIDEO_MODEL=gemini-omni-flash-preview
 ```
 
-Missing keys are intentionally visible in the UI.
+For real Maps results, enable **Places API (New)** and **Routes API** on the Google Maps Platform project associated with `GOOGLE_MAPS_API_KEY`. Set `MAPS_FIXTURE_MODE=true` to exercise the UI without Maps calls.
 
-Visual card generation uses Gemini Omni Flash when `OMNI_FLASH_ENABLED=true` and `GEMINI_API_KEY` is set. Booking summaries use Gemini 3.5 Flash. The phone Translate Lens uses Nano Banana 2 only after a deliberate capture, while city games use one-off Gemini 3.5 Flash vision checks and do not retain photos.
+## Quality checks
 
-## Maps testing
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+npm run test:memory
+```
 
-- Leave `GOOGLE_MAPS_API_KEY` empty to verify the disabled/no-key state.
-- Set `MAPS_FIXTURE_MODE=true` to test the Bengaluru route panel without calling Google Maps.
-- Set `GOOGLE_MAPS_API_KEY` and keep `MAPS_FIXTURE_MODE=false` to call Routes API and Places Nearby Search from the server.
-- If Routes returns "API keys are not supported", confirm the key is a Google Maps Platform server key with Routes API and Places API (New) enabled. For server-side OAuth testing, set `GOOGLE_MAPS_AUTH_MODE=oauth` and either `GOOGLE_MAPS_OAUTH_TOKEN` or `GOOGLE_APPLICATION_CREDENTIALS`.
-- The app injects Maps route context into live turns but does not persist raw Google Maps responses into Supermemory.
+## Notes
+
+- Live audio/video sessions are intentionally capped before Gemini Live's audio+video limit.
+- Images are sent to model APIs only after an explicit translation, game-capture, or historical-video request; game attempt photos are not retained after validation.
+- TimeLens should be treated as a learning aid. Verify historical details with authoritative sources.
