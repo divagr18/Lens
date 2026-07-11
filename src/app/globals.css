@@ -3,6 +3,9 @@
 :root {
   --background: #f6f7f4;
   --foreground: #17201a;
+  --magellan-ink: #26221d;
+  --magellan-paper: #fbf7f1;
+  --magellan-beige: #eee4d7;
 }
 
 @theme inline {
@@ -23,4 +26,144 @@ input,
 select,
 textarea {
   letter-spacing: 0;
+}
+
+.magellan-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--magellan-paper);
+  color: var(--magellan-ink);
+  font-family: var(--font-magellan-sans), sans-serif;
+}
+
+.magellan-shell {
+  background:
+    linear-gradient(rgba(251, 247, 241, 0.2), rgba(251, 247, 241, 0.02)),
+    url("/magellan-riverside.png") center bottom / cover no-repeat;
+}
+
+.magellan-shell--chatting::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 253, 250, 0.22);
+  pointer-events: none;
+}
+
+.magellan-header-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(1.35rem + env(safe-area-inset-top, 0px)) 1.5rem 0;
+}
+
+.magellan-header__button {
+  position: relative;
+  z-index: 51;
+  color: #50483f;
+  border: 0;
+  background: rgba(251, 247, 241, 0.58);
+  cursor: pointer;
+}
+
+.magellan-menu {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.magellan-header__title {
+  color: var(--magellan-ink);
+  font-family: var(--font-magellan-display), sans-serif;
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.magellan-composer {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(transparent, rgba(251, 247, 241, 0.92) 25%);
+}
+
+.gemini-credit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding-top: 0.9rem;
+  color: #71685d;
+  font-size: 0.72rem;
+}
+
+.gemini-credit img {
+  height: 0.95rem;
+  width: auto;
+}
+
+.chat-history-drawer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.chat-history-drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: rgba(38, 34, 29, 0.22);
+  backdrop-filter: blur(4px);
+}
+
+.chat-history-drawer__panel {
+  position: relative;
+  width: min(21rem, 86vw);
+  height: 100%;
+  padding: calc(1.45rem + env(safe-area-inset-top, 0px)) 1rem 1rem;
+  background: var(--magellan-paper);
+  box-shadow: 8px 0 28px rgba(56, 43, 28, 0.17);
+}
+
+.chat-history-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.3rem 1.15rem;
+  border-bottom: 1px solid rgba(84, 68, 49, 0.14);
+}
+
+.chat-history-drawer__header h2 {
+  font-family: var(--font-magellan-display), sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.chat-history-drawer__header button {
+  display: grid;
+  place-items: center;
+  padding: 0.4rem;
+  border: 0;
+  background: transparent;
+}
+
+.chat-history-drawer__empty {
+  padding: 1.25rem 0.3rem;
+  color: #71685d;
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }

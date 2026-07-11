@@ -1,0 +1,11 @@
+{
+  "name": "Magellan",
+  "short_name": "Magellan",
+  "description": "AI travel companion",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0d0d0f",
+  "orientation": "any",
+  "icons": []
+}
