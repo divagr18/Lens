@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { TripProfile } from "@/lib/travel-types";
+import type { CityGame } from "./store";
 import { useMagellanStore } from "./store";
 
 type PhoneLocation = { lat: number; lng: number; accuracy?: number };
@@ -14,6 +15,8 @@ type SocketMessage =
   | { type: "output-audio"; data: string }
   | { type: "interrupted" }
   | { type: "tool-status"; message: string }
+  | { type: "visual-translation-request"; targetLanguage?: string }
+  | { type: "city-game-request"; city?: string }
   | { type: "memory-status"; message: string }
   | { type: "error"; code: string; message: string }
   | { type: "closed"; reason: string };
@@ -30,6 +33,8 @@ export function useLensLiveSession({
   const [status, setStatus] = useState("Start the camera to connect to Gemini Live.");
   const [isReady, setIsReady] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream>();
+  const [translationRequest, setTranslationRequest] = useState<{ id: string; targetLanguage?: string }>();
+  const [gameRequest, setGameRequest] = useState<{ id: string; city?: string }>();
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -123,6 +128,19 @@ export function useLensLiveSession({
     sendJson({ type: "video", data: canvas.toDataURL("image/jpeg", 0.72).split(",")[1] });
   }, [sendJson, videoRef]);
 
+  const captureStill = useCallback(() => {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video.videoHeight) return undefined;
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(1, 1_280 / Math.max(video.videoWidth, video.videoHeight));
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return undefined;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.84);
+  }, [videoRef]);
+
   const sendAudioChunk = useCallback((samples: Float32Array, sampleRate: number) => {
     if (!readyRef.current) return;
     sendJson({ type: "audio", data: int16ToBase64(resampleToPcm16(samples, sampleRate, 16_000)) });
@@ -183,6 +201,14 @@ export function useLensLiveSession({
     }
     if (message.type === "tool-status" || message.type === "memory-status") {
       setStatus(message.message);
+      return;
+    }
+    if (message.type === "visual-translation-request") {
+      setTranslationRequest({ id: crypto.randomUUID(), targetLanguage: message.targetLanguage });
+      return;
+    }
+    if (message.type === "city-game-request") {
+      setGameRequest({ id: crypto.randomUUID(), city: message.city });
       return;
     }
     if (message.type === "error") {
@@ -284,6 +310,26 @@ export function useLensLiveSession({
     }
   }, [videoRef]);
 
+  const sendGameContext = useCallback((game: CityGame) => {
+    if (!readyRef.current) return;
+    sendJson({
+      type: "game-context",
+      game: {
+        gameId: game.gameId,
+        city: game.city,
+        score: game.score,
+        targets: game.targets.map((target) => ({
+          id: target.id,
+          title: target.title,
+          hint: target.hint,
+          successCriteria: target.successCriteria,
+          points: target.points,
+          completed: target.completed,
+        })),
+      },
+    });
+  }, [sendJson]);
+
   useEffect(() => () => stop("Live view closed."), [stop]);
 
   return {
@@ -294,6 +340,10 @@ export function useLensLiveSession({
     stop,
     sendText,
     switchCamera,
+    captureStill,
+    sendGameContext,
+    translationRequest,
+    gameRequest,
   };
 }
 

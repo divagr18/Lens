@@ -98,6 +98,11 @@ const liveMapsTools = [
         description:
           "Use when the traveler asks to start a city game, scavenger hunt, or photo challenge. This opens a short public visual scavenger hunt for the selected trip city on the phone.",
       },
+      {
+        name: "get_city_game_status",
+        description:
+          "Use when the traveler asks what is left in their city treasure hunt, asks for the next target, or when game progress affects your answer. It returns the current uncompleted targets and score.",
+      },
     ],
   },
 ];
@@ -185,6 +190,7 @@ function attachRealtimeLiveSession(ws) {
   let trip;
   let tripMemory = "";
   let currentMemoryContext = "";
+  let cityGameContext = "";
   let pendingUserTranscript = "";
   let pendingAssistantTranscript = "";
   let curatorTimer;
@@ -300,6 +306,7 @@ function attachRealtimeLiveSession(ws) {
                   phoneTimezone,
                   trip,
                   getMemoryContext: () => currentMemoryContext,
+                  getGameContext: () => cityGameContext,
                   send: (payload) => sendJson(ws, payload),
                 });
               }
@@ -429,6 +436,29 @@ function attachRealtimeLiveSession(ws) {
       return;
     }
 
+    if (payload.type === "game-context") {
+      const nextGameContext = normalizeCityGameContext(payload.game);
+      if (!nextGameContext) {
+        sendJson(ws, { type: "error", code: "invalid-game-context", message: "City-game state was malformed." });
+        return;
+      }
+      cityGameContext = nextGameContext;
+      try {
+        session.sendRealtimeInput({
+          text: `[SYSTEM: current city treasure-hunt context. Use this silently for all relevant answers; do not announce this update unless asked.\n${cityGameContext}]`,
+        });
+      } catch (error) {
+        sendJson(ws, {
+          type: "error",
+          code: "game-context-forward-failed",
+          message: error instanceof Error ? error.message : "Could not update Gemini with the city-game state.",
+        });
+        return;
+      }
+      sendJson(ws, { type: "tool-status", message: "City treasure-hunt progress is synced." });
+      return;
+    }
+
     if (payload.type === "text") {
       if (typeof payload.text !== "string" || !payload.text.trim() || payload.text.length > 4_000) {
         sendJson(ws, { type: "error", code: "invalid-text", message: "Text input was missing or too long." });
@@ -518,13 +548,13 @@ function parsePhoneLocation(location) {
   };
 }
 
-async function handleLiveMapsToolCalls({ session, calls, phoneLocation, phoneTimezone, trip, getMemoryContext, send }) {
+async function handleLiveMapsToolCalls({ session, calls, phoneLocation, phoneTimezone, trip, getMemoryContext, getGameContext, send }) {
   const functionResponses = await Promise.all(
     calls.map(async (call) => {
       const name = call.name || "unknown_tool";
       send({ type: "tool-status", message: toolStatusMessage(name) });
       try {
-        const output = await runLiveMapsTool({ name, args: call.args ?? {}, phoneLocation, phoneTimezone, trip, getMemoryContext, send });
+        const output = await runLiveMapsTool({ name, args: call.args ?? {}, phoneLocation, phoneTimezone, trip, getMemoryContext, getGameContext, send });
         return { id: call.id, name, response: { output } };
       } catch (error) {
         return {
@@ -549,7 +579,7 @@ async function handleLiveMapsToolCalls({ session, calls, phoneLocation, phoneTim
   }
 }
 
-async function runLiveMapsTool({ name, args, phoneLocation, phoneTimezone, trip, getMemoryContext, send }) {
+async function runLiveMapsTool({ name, args, phoneLocation, phoneTimezone, trip, getMemoryContext, getGameContext, send }) {
   if (name === "translate_visible_text") {
     send({ type: "visual-translation-request", targetLanguage: defaultTargetLanguage(trip?.languagePreferences) });
     return {
@@ -564,6 +594,9 @@ async function runLiveMapsTool({ name, args, phoneLocation, phoneTimezone, trip,
       city: trip?.destinationCity || "selected city",
       message: "The phone is creating a short visual scavenger hunt.",
     };
+  }
+  if (name === "get_city_game_status") {
+    return { game: getGameContext?.() || "No city treasure hunt is active yet." };
   }
   if (name === "get_current_time") {
     return currentTimeForTimezone(phoneTimezone);
@@ -634,6 +667,7 @@ async function callLiveWeatherRoute(payload) {
 }
 
 function toolStatusMessage(name) {
+  if (name === "get_city_game_status") return "Checking your remaining treasure-hunt targets.";
   if (name === "get_current_time") return "Checking the local time…";
   if (name === "get_traveler_memory") return "Checking your saved travel preferences…";
   if (name === "locate_me") return "Checking nearby Places from your phone location…";
@@ -647,6 +681,28 @@ function toolStatusMessage(name) {
 
 function normalizeTripMemory(memory) {
   return typeof memory === "string" ? memory.trim().slice(0, 6_000) : "";
+}
+
+function normalizeCityGameContext(game) {
+  if (!game || typeof game !== "object") return "";
+  const city = typeof game.city === "string" ? game.city.trim().slice(0, 120) : "";
+  const score = typeof game.score === "number" && Number.isFinite(game.score) ? Math.max(0, Math.round(game.score)) : 0;
+  const targets = Array.isArray(game.targets) ? game.targets : [];
+  const remaining = targets
+    .filter((target) => target && typeof target === "object" && target.completed !== true)
+    .map((target) => {
+      const title = typeof target.title === "string" ? target.title.trim().slice(0, 100) : "";
+      const hint = typeof target.hint === "string" ? target.hint.trim().slice(0, 180) : "";
+      return title ? `- ${title}${hint ? `: ${hint}` : ""}` : "";
+    })
+    .filter(Boolean)
+    .slice(0, 5);
+  if (!city || !targets.length) return "";
+  return [
+    `City treasure hunt: ${city}.`,
+    `Score: ${score}. Remaining targets (${remaining.length}):`,
+    remaining.length ? remaining.join("\n") : "All targets are complete.",
+  ].join("\n");
 }
 
 function parseTimezone(timeZone) {
@@ -700,6 +756,7 @@ function buildLiveSystemInstruction(tripMemory) {
     "When asked for the current date or time, whether to leave now, or another time-sensitive decision, use get_current_time instead of assuming the date or time.",
     "When the traveler asks to translate what is visible, use translate_visible_text. Briefly say you are preparing a translated copy, then let the phone show it; never claim the generated image is authoritative over the original.",
     "When the traveler asks for a city game or visual scavenger hunt, use start_city_game. The game must stay a safe public visual activity and must not require purchases, risky movement, private access, or photos of people.",
+    "A city treasure hunt may be active. The phone sends its current score and remaining targets as silent context updates. Retain that state for the whole session; use get_city_game_status for a fresh answer when asked what remains or what to find next.",
     "Use get_traveler_memory when saved preferences, corrections, or trip details could materially change the answer and the initial memory is insufficient.",
     "Turn tool results into practical advice. Apply the traveler memory below to every recommendation: protect their budget, avoid unsuitable walking or routes, account for luggage and dietary needs, and explain the relevant tradeoff. Do not give generic advice when memory changes the decision.",
     "If rain or heat makes the plan unsafe or impractical for the traveler’s mobility, say so plainly and offer a lower-walking, budget-aware alternative.",

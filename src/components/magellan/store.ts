@@ -22,6 +22,20 @@ export interface GameTarget {
   completed: boolean;
 }
 
+export interface CityGame {
+  gameId: string;
+  city: string;
+  createdAt: string;
+  score: number;
+  targets: GameTarget[];
+}
+
+export interface GameNotice {
+  id: string;
+  tone: "success" | "info" | "error";
+  message: string;
+}
+
 interface AppState {
   orientation: "vertical" | "horizontal";
   isMuted: boolean;
@@ -35,11 +49,17 @@ interface AppState {
   chatHistoryByTrip: Record<string, ChatHistoryItem[]>;
   gameTargets: GameTarget[];
   gameScore: number;
+  cityGame?: CityGame;
+  activeGameTargetId?: string;
+  isGamePageOpen: boolean;
+  gameNotice?: GameNotice;
   isCameraActive: boolean;
   facingMode: "user" | "environment";
   isGenerating: boolean;
   isConnected: boolean;
   isScrollingDown: boolean;
+  inputText: string;
+  isInputFocused: boolean;
   setOrientation: (orientation: "vertical" | "horizontal") => void;
   setMuted: (muted: boolean) => void;
   setVoiceActive: (active: boolean) => void;
@@ -53,12 +73,18 @@ interface AppState {
   setChatHistoryOpen: (open: boolean) => void;
   setChatHistory: (tripId: string, history: ChatHistoryItem[]) => void;
   setGame: (targets: GameTarget[], score: number) => void;
+  setCityGame: (game?: CityGame) => void;
+  setActiveGameTarget: (targetId?: string) => void;
+  setGamePageOpen: (open: boolean) => void;
+  setGameNotice: (notice?: GameNotice) => void;
   setCameraActive: (active: boolean) => void;
   setFacingMode: (mode: "user" | "environment") => void;
   toggleFacingMode: () => void;
   setIsGenerating: (generating: boolean) => void;
   setConnected: (connected: boolean) => void;
   setScrollingDown: (down: boolean) => void;
+  setInputText: (text: string) => void;
+  setInputFocused: (focused: boolean) => void;
 }
 
 export const useMagellanStore = create<AppState>((set) => ({
@@ -74,11 +100,17 @@ export const useMagellanStore = create<AppState>((set) => ({
   chatHistoryByTrip: {},
   gameTargets: [],
   gameScore: 0,
+  cityGame: undefined,
+  activeGameTargetId: undefined,
+  isGamePageOpen: false,
+  gameNotice: undefined,
   isCameraActive: false,
   facingMode: "environment",
   isGenerating: false,
   isConnected: false,
   isScrollingDown: false,
+  inputText: "",
+  isInputFocused: false,
   setOrientation: (orientation) => set({ orientation }),
   setMuted: (isMuted) => set({ isMuted }),
   setVoiceActive: (isVoiceActive) => set({ isVoiceActive }),
@@ -148,6 +180,15 @@ export const useMagellanStore = create<AppState>((set) => ({
   setChatHistory: (tripId, history) =>
     set((state) => ({ chatHistoryByTrip: { ...state.chatHistoryByTrip, [tripId]: history } })),
   setGame: (gameTargets, gameScore) => set({ gameTargets, gameScore }),
+  setCityGame: (cityGame) => set({
+    cityGame,
+    gameTargets: cityGame?.targets ?? [],
+    gameScore: cityGame?.score ?? 0,
+    activeGameTargetId: cityGame?.targets.find((target) => !target.completed)?.id,
+  }),
+  setActiveGameTarget: (activeGameTargetId) => set({ activeGameTargetId }),
+  setGamePageOpen: (isGamePageOpen) => set({ isGamePageOpen }),
+  setGameNotice: (gameNotice) => set({ gameNotice }),
   setCameraActive: (isCameraActive) => set({ isCameraActive }),
   setFacingMode: (facingMode) => set({ facingMode }),
   toggleFacingMode: () =>
@@ -155,4 +196,6 @@ export const useMagellanStore = create<AppState>((set) => ({
   setIsGenerating: (isGenerating) => set({ isGenerating }),
   setConnected: (isConnected) => set({ isConnected }),
   setScrollingDown: (isScrollingDown) => set({ isScrollingDown }),
+  setInputText: (inputText) => set({ inputText }),
+  setInputFocused: (isInputFocused) => set({ isInputFocused }),
 }));

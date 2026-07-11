@@ -10,7 +10,7 @@ import { ConnectionBadge } from "./ConnectionBadge";
 import { RotationToggle } from "./RotationToggle";
 import { useMagellanStore } from "./store";
 
-export function OrientationGuard({ vertical, horizontal, onFlipCamera }: { vertical: ReactNode; horizontal: ReactNode; onFlipCamera?: (nextFacingMode: "user" | "environment") => void }) {
+export function OrientationGuard({ vertical, horizontal, onFlipCamera, onOpenLive }: { vertical: ReactNode; horizontal: ReactNode; onFlipCamera?: (nextFacingMode: "user" | "environment") => void; onOpenLive?: () => void }) {
   const orientation = useMagellanStore((state) => state.orientation);
   const isScrollingDown = useMagellanStore((state) => state.isScrollingDown);
   const setChatHistoryOpen = useMagellanStore((state) => state.setChatHistoryOpen);
@@ -33,11 +33,11 @@ export function OrientationGuard({ vertical, horizontal, onFlipCamera }: { verti
             <Menu className="h-7 w-7" strokeWidth={1.55} />
           </button>
           <h1 className="magellan-header__title">Magellan</h1>
-          <RotationToggle orientation={orientation} />
+          <RotationToggle orientation={orientation} onOpenLive={onOpenLive} />
         </motion.div>
       ) : (
         <>
-          <RotationToggle orientation={orientation} />
+          <RotationToggle orientation={orientation} onOpenLive={onOpenLive} />
           <CameraFlipButton onFlip={onFlipCamera} />
         </>
       )}
