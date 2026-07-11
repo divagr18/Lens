@@ -5,7 +5,6 @@ import { loadActiveTripId, loadSavedTrips } from "@/lib/trip-registry";
 import type { TripProfile } from "@/lib/travel-types";
 import { ChatThread } from "./ChatThread";
 import { CameraFeed } from "./CameraFeed";
-import { GlassPanel } from "./GlassPanel";
 import { HorizontalLayout } from "./HorizontalLayout";
 import { InputBar } from "./InputBar";
 import { OrientationGuard } from "./OrientationGuard";
@@ -66,7 +65,7 @@ export function MagellanApp() {
   const createCityGame = useCallback(async (requestedCity = gameCity) => {
     const city = requestedCity.trim();
     if (!city) return;
-    setGameNotice({ id: crypto.randomUUID(), tone: "info", message: `Creating your ${city} treasure hunt…` });
+    setGameNotice({ id: crypto.randomUUID(), tone: "info", message: "Preparing city activity…" });
     try {
       const response = await fetch("/api/games/session", {
         method: "POST",
@@ -77,9 +76,9 @@ export function MagellanApp() {
       if (!response.ok || !body.game) throw new Error(body.error || "Could not create a city treasure hunt.");
       setCityGame(body.game);
       sendGameContext(body.game);
-      setGameNotice({ id: crypto.randomUUID(), tone: "success", message: `${body.game.targets.length} city finds are ready.` });
+      setGameNotice({ id: crypto.randomUUID(), tone: "success", message: "City activity is ready." });
     } catch (error) {
-      setGameNotice({ id: crypto.randomUUID(), tone: "error", message: error instanceof Error ? error.message : "Could not create the treasure hunt." });
+      setGameNotice({ id: crypto.randomUUID(), tone: "error", message: error instanceof Error ? error.message : "Could not prepare the city activity." });
     }
   }, [gameCity, sendGameContext, setCityGame, setGameNotice]);
 
@@ -88,7 +87,7 @@ export function MagellanApp() {
     const targetId = useMagellanStore.getState().activeGameTargetId
       ?? game?.targets.find((target) => !target.completed)?.id;
     if (!game || !targetId) return;
-    setGameNotice({ id: crypto.randomUUID(), tone: "info", message: "Checking the treasure-hunt target…" });
+    setGameNotice({ id: crypto.randomUUID(), tone: "info", message: "Checking this capture…" });
     void fetch("/api/games/attempt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -102,7 +101,7 @@ export function MagellanApp() {
         setGameNotice({
           id: crypto.randomUUID(),
           tone: body.completed ? "success" : "info",
-          message: body.feedback || (body.completed ? "Treasure found." : "Not quite — try another view."),
+          message: body.completed ? "Capture matched." : "Try another view.",
         });
       })
       .catch((error) => setGameNotice({ id: crypto.randomUUID(), tone: "error", message: error instanceof Error ? error.message : "Could not validate that capture." }));
@@ -185,7 +184,7 @@ export function MagellanApp() {
         horizontal={
           <HorizontalLayout
             cameraFeed={<CameraFeed videoRef={videoRef} stream={mediaStream} status={liveStatus} />}
-            glassPanel={<GlassPanel className="h-full overflow-hidden p-0"><ChatThread compact /></GlassPanel>}
+            glassPanel={<ChatThread compact />}
             onToggleVoice={toggleLive}
             captureStill={captureStill}
             onValidateTreasure={validateTreasureCapture}

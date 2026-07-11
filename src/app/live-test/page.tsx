@@ -7,7 +7,7 @@ import { loadActiveTripId, loadSavedTrips, setActiveTripId } from "@/lib/trip-re
 
 type SocketMessage =
   | { type: "connected"; transport: string }
-  | { type: "ready"; model: string; maxDurationMs: number }
+  | { type: "ready"; model: string }
   | { type: "input-transcript"; text: string; final: boolean }
   | { type: "output-transcript"; text: string; final: boolean }
   | { type: "output-audio"; data: string; mimeType: string }
@@ -104,7 +104,6 @@ export default function LiveTestPage() {
   const [latestFrame, setLatestFrame] = useState<string>();
   const [inputTranscript, setInputTranscript] = useState("");
   const [outputTranscript, setOutputTranscript] = useState("");
-  const [secondsRemaining, setSecondsRemaining] = useState<number>();
   const [metrics, setMetrics] = useState<ServerMetrics>(emptyMetrics);
   const [locationStatus, setLocationStatus] = useState("GPS off");
   const [tripMemory] = useState(() => {
@@ -135,9 +134,6 @@ export default function LiveTestPage() {
   const audioSourcesRef = useRef(new Set<AudioBufferSourceNode>());
   const nextPlaybackTimeRef = useRef(0);
   const frameTimerRef = useRef<number | undefined>(undefined);
-  const expiryTimerRef = useRef<number | undefined>(undefined);
-  const countdownTimerRef = useRef<number | undefined>(undefined);
-  const startedAtRef = useRef(0);
   const readyRef = useRef(false);
   const audioSamplesRef = useRef<Float32Array[]>([]);
   const audioSampleCountRef = useRef(0);
@@ -154,11 +150,7 @@ export default function LiveTestPage() {
 
   const clearTimers = useCallback(() => {
     if (frameTimerRef.current) window.clearInterval(frameTimerRef.current);
-    if (expiryTimerRef.current) window.clearTimeout(expiryTimerRef.current);
-    if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
     frameTimerRef.current = undefined;
-    expiryTimerRef.current = undefined;
-    countdownTimerRef.current = undefined;
   }, []);
 
   const releaseMedia = useCallback(() => {
@@ -198,7 +190,6 @@ export default function LiveTestPage() {
       setGameBusy(false);
       setGameStatus("Choose a city and start a short public photo hunt.");
       setIsRunning(false);
-      setSecondsRemaining(undefined);
       setStatus(reason);
     },
     [clearAssistantAudio, clearTimers, releaseMedia]
@@ -473,21 +464,11 @@ export default function LiveTestPage() {
   }, []);
 
   const beginTimers = useCallback(
-    (maxDurationMs: number) => {
-      startedAtRef.current = Date.now();
-      setSecondsRemaining(Math.ceil(maxDurationMs / 1000));
+    () => {
       frameTimerRef.current = window.setInterval(sendVideoFrame, 1000);
       sendVideoFrame();
-      countdownTimerRef.current = window.setInterval(() => {
-        const remaining = Math.max(0, maxDurationMs - (Date.now() - startedAtRef.current));
-        setSecondsRemaining(Math.ceil(remaining / 1000));
-      }, 500);
-      expiryTimerRef.current = window.setTimeout(
-        () => stopSession("Live test reached its 110 second limit. Start a new session to continue."),
-        maxDurationMs
-      );
     },
-    [sendVideoFrame, stopSession]
+    [sendVideoFrame]
   );
 
   const handleSocketMessage = useCallback(
@@ -509,7 +490,7 @@ export default function LiveTestPage() {
         sendPhoneLocation(phoneLocationRef.current);
         setIsRunning(true);
         setStatus(`Streaming to ${message.model}. Speak naturally and show the camera what you want examined.`);
-        beginTimers(message.maxDurationMs);
+        beginTimers();
         return;
       }
       if (message.type === "input-transcript") {
@@ -831,7 +812,6 @@ export default function LiveTestPage() {
 
         <section className="grid gap-3 sm:grid-cols-3">
           <Metric label="Session" value={isRunning ? "streaming" : "idle"} />
-          <Metric label="Time left" value={secondsRemaining ? `${secondsRemaining}s` : "—"} />
           <Metric label="Camera frames" value={String(metrics.frames)} />
           <Metric label="Mic chunks" value={String(metrics.audioChunks)} />
           <Metric label="Camera sent" value={formatBytes(metrics.frameBytes)} />

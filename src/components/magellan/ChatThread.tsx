@@ -48,19 +48,10 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
 
   return (
     <section className={`chat-thread ${compact ? "chat-thread--compact" : ""}`} aria-label="Conversation">
-      {!compact && <MemorySheet />}
-      {cityGame && (
-        <button className={`treasure-summary ${compact ? "treasure-summary--compact" : ""}`} type="button" onClick={() => setGamePageOpen(true)}>
-          <span className="treasure-summary__icon"><Trophy size={compact ? 14 : 16} /></span>
-          <span><b>{compact ? "Treasure hunt" : `${cityGame.city} treasure hunt`}</b><small>{remaining ? `${remaining} items left` : "Complete"}</small></span>
-          {!compact && <MapPinned size={16} />}
-        </button>
-      )}
       {!hasConversation ? (
         !hideWelcome ? (
           <div className="chat-thread__empty" aria-live="polite">
-            {!compact && <><span className="chat-thread__welcome">Welcome to</span><TripSelector /></>}
-            <p>{compact ? "Point your camera and speak" : "How can I help you today?"}</p>
+            {!compact && <><span className="chat-thread__welcome">Welcome to</span><TripSelector /><p>How can I help you today?</p></>}
           </div>
         ) : null
       ) : (
@@ -71,6 +62,18 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
             </motion.article>
           ))}
           {liveTranscription && <div className="live-transcription">{liveTranscription}</div>}
+        </div>
+      )}
+      {!compact && (
+        <div className="chat-thread__utilities">
+          <MemorySheet inline />
+          {cityGame && (
+            <button className="treasure-summary" type="button" onClick={() => setGamePageOpen(true)}>
+              <span className="treasure-summary__icon"><Trophy size={16} /></span>
+              <span><b>{`${cityGame.city} treasure hunt`}</b><small>{remaining ? `${remaining} items left` : "Complete"}</small></span>
+              <MapPinned size={16} />
+            </button>
+          )}
         </div>
       )}
     </section>

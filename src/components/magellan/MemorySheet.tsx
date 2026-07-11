@@ -12,7 +12,7 @@ type SnapshotState =
   | { kind: "ready"; memory: MemoryContext }
   | { kind: "error"; message: string };
 
-export function MemorySheet() {
+export function MemorySheet({ inline = false }: { inline?: boolean }) {
   const activeTripId = useMagellanStore((state) => state.activeTripId);
   const [isOpen, setIsOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<SnapshotState>({ kind: "idle" });
@@ -57,7 +57,9 @@ export function MemorySheet() {
   return (
     <>
       <button
-        className="absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))] z-20 inline-flex h-10 items-center gap-2 rounded-full border border-[#8d7760]/20 bg-[#fffdfa]/80 px-3 text-xs font-semibold text-[#50483f] shadow-[0_8px_24px_rgba(84,68,49,0.12)] backdrop-blur-md transition hover:bg-[#fffdfa]"
+        className={inline
+          ? "chat-utility-button"
+          : "absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))] z-20 inline-flex h-10 items-center gap-2 rounded-full border border-[#8d7760]/20 bg-[#fffdfa]/80 px-3 text-xs font-semibold text-[#50483f] shadow-[0_8px_24px_rgba(84,68,49,0.12)] backdrop-blur-md transition hover:bg-[#fffdfa]"}
         type="button"
         onClick={() => {
           setIsOpen(true);

@@ -15,7 +15,6 @@ const port = Number.parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
 const wss = new WebSocketServer({ noServer: true });
-const liveTestDurationMs = 110_000;
 const maxAudioPayloadLength = 32_000;
 const maxVideoPayloadLength = 2_000_000;
 const liveMapsTools = [
@@ -196,14 +195,12 @@ function attachRealtimeLiveSession(ws) {
   let curatorTimer;
   let curatorQueue = Promise.resolve();
   let stopping = false;
-  let timeout;
   let metrics = { audioChunks: 0, audioBytes: 0, frames: 0, frameBytes: 0 };
 
   function closeSession(reason = "closed") {
     if (stopping) return;
     flushCuratorTurn();
     stopping = true;
-    if (timeout) clearTimeout(timeout);
     if (curatorTimer) clearTimeout(curatorTimer);
     try {
       session?.close();
@@ -364,9 +361,7 @@ function attachRealtimeLiveSession(ws) {
         sendJson(ws, {
           type: "ready",
           model: process.env.GEMINI_LIVE_MODEL || "gemini-3.1-flash-live-preview",
-          maxDurationMs: liveTestDurationMs,
         });
-        timeout = setTimeout(() => closeSession("Test session reached the 110 second limit."), liveTestDurationMs);
         if (trip) {
           void loadTravelMemory(trip).then((memory) => {
             if (memory.ok && memory.text) currentMemoryContext = `${tripMemory}\n${memory.text}`.slice(0, 6_000);

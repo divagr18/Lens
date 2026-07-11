@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import { acknowledge } from "./acknowledge";
 import { CameraFlipButton } from "./CameraFlipButton";
 import { ChatHistoryDrawer } from "./ChatHistoryDrawer";
-import { ConnectionBadge } from "./ConnectionBadge";
 import { RotationToggle } from "./RotationToggle";
 import { useMagellanStore } from "./store";
 
@@ -42,7 +41,6 @@ export function OrientationGuard({ vertical, horizontal, onFlipCamera, onOpenLiv
         </>
       )}
       <ChatHistoryDrawer />
-      <ConnectionBadge orientation={orientation} />
       <motion.div
         key={orientation}
         className="absolute inset-0"

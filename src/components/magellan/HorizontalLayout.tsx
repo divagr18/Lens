@@ -133,8 +133,15 @@ export function HorizontalLayout({
           >
             <button type="button" onClick={closePopup} className="translation-popover__close" aria-label="Close translation preview" disabled={translation === "loading"}><X size={14} /></button>
             <div className={`translation-popover__image ${translation === "loading" ? "is-loading" : ""}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={displayImage} alt={translation === "ready" ? "AI-rendered translation" : "Captured camera frame"} onClick={() => translation === "ready" && displayImage && setIsFullscreen(true)} />
+              {translation === "ready" && displayImage ? (
+                <button type="button" className="translation-popover__expand-button" onClick={() => setIsFullscreen(true)} aria-label="Open translated image fullscreen">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={displayImage} alt="AI-rendered translation" />
+                </button>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={displayImage} alt="Captured camera frame" />
+              )}
               {translation === "loading" && <span className="translation-popover__loading"><Loader2 size={20} className="animate-spin" /></span>}
               {translation === "ready" && displayImage && <span className="translation-popover__expand"><Maximize2 size={14} /> Tap to expand</span>}
             </div>
