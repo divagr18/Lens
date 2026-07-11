@@ -16,6 +16,15 @@ type TranslationResult = {
   textBlocks: Array<{ source: string; translation: string; confidence: number }>;
 };
 
+type HistoricalVideoResult = {
+  status: "ready" | "error";
+  title: string;
+  summary: string;
+  disclaimer: string;
+  videoDataUrl?: string;
+  fallbackMessage?: string;
+};
+
 export function HorizontalLayout({
   cameraFeed,
   glassPanel,
@@ -23,6 +32,7 @@ export function HorizontalLayout({
   captureStill,
   onValidateTreasure,
   targetLanguage,
+  historicalVideoRequest,
   voiceBubble,
 }: {
   cameraFeed: ReactNode;
@@ -31,6 +41,7 @@ export function HorizontalLayout({
   captureStill: () => string | undefined;
   onValidateTreasure: (imageDataUrl: string) => void;
   targetLanguage: string;
+  historicalVideoRequest?: { id: string; topic: string; context?: string };
   voiceBubble?: ReactNode;
 }) {
   const isVoiceActive = useMagellanStore((state) => state.isVoiceActive);
@@ -43,10 +54,54 @@ export function HorizontalLayout({
   const [translationResult, setTranslationResult] = useState<TranslationResult>();
   const [translationError, setTranslationError] = useState<string>();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [historicalVideoResponse, setHistoricalVideoResponse] = useState<{ requestId: string; result: HistoricalVideoResult }>();
+  const [dismissedHistoricalVideoId, setDismissedHistoricalVideoId] = useState<string>();
 
   useEffect(() => {
     setCameraActive(true);
   }, [setCameraActive]);
+
+  useEffect(() => {
+    if (!historicalVideoRequest) return;
+    const controller = new AbortController();
+    void fetch("/api/historical-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: historicalVideoRequest.topic, context: historicalVideoRequest.context }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = (await response.json().catch(() => ({}))) as HistoricalVideoResult & { error?: string };
+        if (!response.ok || body.error) throw new Error(body.error || "Historical video generation failed.");
+        setHistoricalVideoResponse({ requestId: historicalVideoRequest.id, result: body });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setHistoricalVideoResponse({
+          requestId: historicalVideoRequest.id,
+          result: {
+            status: "error",
+            title: `A moment from ${historicalVideoRequest.topic}`,
+            summary: "The historical scene could not be rendered.",
+            disclaimer: "AI-generated reconstructions are illustrative, not archival footage.",
+            fallbackMessage: error instanceof Error ? error.message : "Historical video generation failed.",
+          },
+        });
+      });
+    return () => controller.abort();
+  }, [historicalVideoRequest]);
+
+  const latestHistoricalVideoResponse = historicalVideoResponse;
+  const historicalVideoResult = latestHistoricalVideoResponse && latestHistoricalVideoResponse.requestId === historicalVideoRequest?.id
+    ? latestHistoricalVideoResponse.result
+    : undefined;
+  const historicalVideo = !historicalVideoRequest || dismissedHistoricalVideoId === historicalVideoRequest.id
+    ? "idle"
+    : historicalVideoResult?.status === "ready"
+      ? "ready"
+      : historicalVideoResult
+        ? "error"
+        : "loading";
 
   function closePopup() {
     if (translation === "loading") return;
@@ -137,13 +192,13 @@ export function HorizontalLayout({
                 <button type="button" className="translation-popover__expand-button" onClick={() => setIsFullscreen(true)} aria-label="Open translated image fullscreen">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={displayImage} alt="AI-rendered translation" />
+                  <span className="translation-popover__expand"><Maximize2 size={14} /> Tap to expand</span>
                 </button>
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={displayImage} alt="Captured camera frame" />
               )}
               {translation === "loading" && <span className="translation-popover__loading"><Loader2 size={20} className="animate-spin" /></span>}
-              {translation === "ready" && displayImage && <span className="translation-popover__expand"><Maximize2 size={14} /> Tap to expand</span>}
             </div>
             <div className="translation-popover__footer">
               {translation === "idle" && <button type="button" className="translation-popover__translate" onClick={handleTranslate}><Languages size={14} /> Translate</button>}
@@ -156,10 +211,48 @@ export function HorizontalLayout({
 
         {isFullscreen && displayImage && (
           <motion.div className="absolute inset-0 z-40 grid place-items-center bg-[#0d0d0f]/95 p-8 backdrop-blur-xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <button type="button" className="absolute left-6 top-6 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white" onClick={() => setIsFullscreen(false)}>Back</button>
+            <button type="button" className="absolute right-6 top-6 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white" onClick={() => setIsFullscreen(false)}>Back</button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={displayImage} alt="AI-rendered translated visual" className="h-full w-full object-contain" />
           </motion.div>
+        )}
+
+        {historicalVideo !== "idle" && (
+          <motion.section
+            className="absolute bottom-6 left-1/2 z-30 w-[min(25rem,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.7rem] border border-white/30 bg-[#15141a]/92 text-white shadow-[0_20px_60px_rgba(0,0,0,0.48)] backdrop-blur-2xl"
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 14, scale: 0.96 }}
+            transition={{ type: "spring", damping: 26, stiffness: 310 }}
+            aria-live="polite"
+            aria-label="Historical reconstruction"
+          >
+            <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
+              <div>
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[#b9adff]">TimeLens reconstruction</p>
+                <h2 className="mt-1 text-base font-semibold leading-tight">{historicalVideo === "loading" ? "Reconstructing this moment…" : historicalVideoResult?.title}</h2>
+              </div>
+              {historicalVideo !== "loading" && <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white/80 hover:bg-white/20" onClick={() => setDismissedHistoricalVideoId(historicalVideoRequest?.id)} aria-label="Close historical reconstruction"><X size={16} /></button>}
+            </div>
+            {historicalVideo === "loading" ? (
+              <div className="flex aspect-video items-center justify-center gap-3 bg-black/35 text-sm text-white/75">
+                <Loader2 className="animate-spin" size={21} /> Creating an illustrative scene
+              </div>
+            ) : historicalVideo === "ready" && historicalVideoResult?.videoDataUrl ? (
+              <video className="aspect-video w-full bg-black object-cover" src={historicalVideoResult.videoDataUrl} autoPlay muted playsInline controls preload="metadata" />
+            ) : (
+              <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-black/35 px-5 text-center text-sm text-white/75">
+                <AlertCircle size={22} className="text-[#f4b8a6]" />
+                <span>{historicalVideoResult?.fallbackMessage || "The reconstruction was unavailable."}</span>
+              </div>
+            )}
+            {historicalVideo !== "loading" && (
+              <div className="space-y-1 px-4 py-3">
+                <p className="text-xs leading-5 text-white/80">{historicalVideoResult?.summary}</p>
+                <p className="text-[0.64rem] leading-4 text-white/45">{historicalVideoResult?.disclaimer}</p>
+              </div>
+            )}
+          </motion.section>
         )}
 
         {gameNotice && (

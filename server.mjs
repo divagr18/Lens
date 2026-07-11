@@ -83,6 +83,26 @@ const liveMapsTools = [
           "Use when current traveler preferences, trip constraints, confirmed plans, or corrected details would materially change your answer. It returns the latest saved profile and trip memory.",
       },
       {
+        name: "generate_historical_scene",
+        description:
+          "Use only when the traveler explicitly asks for a short visual reconstruction or video about a historical event, battle, monument, or site. This starts a separate phone-side generation and does not delay the Live conversation.",
+        parametersJsonSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            topic: {
+              type: "string",
+              description: "The historical event, battle, monument, site, or question to visualize.",
+            },
+            context: {
+              type: "string",
+              description: "Optional concise context visible at the site or supplied by the traveler.",
+            },
+          },
+          required: ["topic"],
+        },
+      },
+      {
         name: "get_current_time",
         description:
           "Use when the traveler asks what time or day it is, whether they should leave now, or asks another time-sensitive question. It returns the current date and time in the phone's timezone.",
@@ -413,6 +433,19 @@ function attachRealtimeLiveSession(ws) {
       return;
     }
 
+    if (payload.type === "historical-video-started") {
+      sendJson(ws, { type: "tool-status", message: "Creating the historical reconstruction…" });
+      return;
+    }
+
+    if (payload.type === "historical-video-finished") {
+      sendJson(ws, {
+        type: "tool-status",
+        message: payload.ok ? "The historical reconstruction is ready on your screen." : "The historical reconstruction could not be rendered.",
+      });
+      return;
+    }
+
     if (payload.type === "game-started") {
       sendJson(ws, { type: "tool-status", message: "City game ready on your screen." });
       return;
@@ -582,6 +615,17 @@ async function runLiveMapsTool({ name, args, phoneLocation, phoneTimezone, trip,
       message: "The phone is capturing the current view and will show the translated copy when it is ready.",
     };
   }
+  if (name === "generate_historical_scene") {
+    const topic = typeof args.topic === "string" ? args.topic.trim().slice(0, 500) : "";
+    if (!topic) throw new Error("A historical topic is required before creating a reconstruction.");
+    const context = typeof args.context === "string" ? args.context.trim().slice(0, 1_500) : "";
+    send({ type: "historical-video-request", topic, ...(context ? { context } : {}) });
+    return {
+      action: "historical-video-opened",
+      topic,
+      message: "The phone is creating a short illustrative historical reconstruction separately from the Live conversation.",
+    };
+  }
   if (name === "start_city_game") {
     send({ type: "city-game-request", city: trip?.destinationCity || "" });
     return {
@@ -665,6 +709,7 @@ function toolStatusMessage(name) {
   if (name === "get_city_game_status") return "Checking your remaining treasure-hunt targets.";
   if (name === "get_current_time") return "Checking the local time…";
   if (name === "get_traveler_memory") return "Checking your saved travel preferences…";
+  if (name === "generate_historical_scene") return "Creating a historical reconstruction…";
   if (name === "locate_me") return "Checking nearby Places from your phone location…";
   if (name === "get_directions") return "Finding the destination and calculating a route…";
   if (name === "search_places") return "Searching Places for recommendations…";
@@ -750,6 +795,7 @@ function buildLiveSystemInstruction(tripMemory) {
     "When asked about weather, rain, heat, an umbrella, or timing, use the weather tool before answering.",
     "When asked for the current date or time, whether to leave now, or another time-sensitive decision, use get_current_time instead of assuming the date or time.",
     "When the traveler asks to translate what is visible, use translate_visible_text. Briefly say you are preparing a translated copy, then let the phone show it; never claim the generated image is authoritative over the original.",
+    "When the traveler explicitly asks to see a historical event, battle, monument story, or reconstruction as a short video, use generate_historical_scene. Briefly say that you are creating an illustrative reconstruction, not historical footage, then call the tool. Do not call it for a normal spoken historical explanation.",
     "When the traveler asks for a city game or visual scavenger hunt, use start_city_game. The game must stay a safe public visual activity and must not require purchases, risky movement, private access, or photos of people.",
     "A city treasure hunt may be active. The phone sends its current score and remaining targets as silent context updates. Retain that state for the whole session; use get_city_game_status for a fresh answer when asked what remains or what to find next.",
     "Use get_traveler_memory when saved preferences, corrections, or trip details could materially change the answer and the initial memory is insufficient.",

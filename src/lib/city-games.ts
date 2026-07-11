@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 
 const maxImageBytes = 3_000_000;
 const gameLifetimeMs = 2 * 60 * 60 * 1_000;
+const questTemplateLifetimeMs = 24 * 60 * 60 * 1_000;
 const gameSessions = new Map<string, CityGameSession>();
+const questTemplates = new Map<string, { createdAt: string; targets: CityGameTarget[] }>();
 
 const gameSchema = {
   type: "object",
@@ -60,8 +62,11 @@ export type CityGameSession = {
 export async function createCityGame(cityInput: string): Promise<CityGameSession> {
   const city = cleanCity(cityInput);
   if (!city) throw new Error("Choose a city before starting a game.");
-  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured on this laptop.");
   pruneExpiredGames();
+  const cacheKey = city.toLocaleLowerCase();
+  const cachedTemplate = questTemplates.get(cacheKey);
+  if (cachedTemplate) return createSession(city, cachedTemplate.targets);
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured on this laptop.");
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
@@ -87,15 +92,8 @@ export async function createCityGame(cityInput: string): Promise<CityGameSession
   const targets = parseGameTargets(response.text);
   if (targets.length < 3) throw new Error("Gemini did not produce enough safe city-game targets. Try again.");
 
-  const session: CityGameSession = {
-    gameId: randomUUID(),
-    city,
-    createdAt: new Date().toISOString(),
-    score: 0,
-    targets,
-  };
-  gameSessions.set(session.gameId, session);
-  return copySession(session);
+  questTemplates.set(cacheKey, { createdAt: new Date().toISOString(), targets: targets.map((target) => ({ ...target })) });
+  return createSession(city, targets);
 }
 
 export async function validateCityGameAttempt({
@@ -193,10 +191,25 @@ function copySession(session: CityGameSession): CityGameSession {
   return { ...session, targets: session.targets.map((target) => ({ ...target })) };
 }
 
+function createSession(city: string, targets: CityGameTarget[]): CityGameSession {
+  const session: CityGameSession = {
+    gameId: randomUUID(),
+    city,
+    createdAt: new Date().toISOString(),
+    score: 0,
+    targets: targets.map((target) => ({ ...target, completed: false })),
+  };
+  gameSessions.set(session.gameId, session);
+  return copySession(session);
+}
+
 function pruneExpiredGames() {
   const now = Date.now();
   gameSessions.forEach((session, gameId) => {
     if (now - Date.parse(session.createdAt) > gameLifetimeMs) gameSessions.delete(gameId);
+  });
+  questTemplates.forEach((template, city) => {
+    if (now - Date.parse(template.createdAt) > questTemplateLifetimeMs) questTemplates.delete(city);
   });
 }
 

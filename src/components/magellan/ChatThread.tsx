@@ -3,7 +3,6 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { MapPinned, Trophy } from "lucide-react";
 import { MemorySheet } from "./MemorySheet";
 import { TreasureHuntPage } from "./TreasureHuntPage";
 import { TripSelector } from "./TripSelector";
@@ -69,9 +68,8 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
           <MemorySheet inline />
           {cityGame && (
             <button className="treasure-summary" type="button" onClick={() => setGamePageOpen(true)}>
-              <span className="treasure-summary__icon"><Trophy size={16} /></span>
-              <span><b>{`${cityGame.city} treasure hunt`}</b><small>{remaining ? `${remaining} items left` : "Complete"}</small></span>
-              <MapPinned size={16} />
+              <span><b>{`${cityGame.city} city finds`}</b><small>{remaining ? `${remaining} left` : "Complete"}</small></span>
+              <span className="treasure-summary__open">View</span>
             </button>
           )}
         </div>

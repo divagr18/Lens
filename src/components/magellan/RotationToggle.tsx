@@ -26,7 +26,7 @@ export function RotationToggle({ orientation, onOpenLive }: { orientation: "vert
   return (
     <motion.button
       onClick={handleToggle}
-      className={`absolute z-50 grid h-11 w-11 place-items-center rounded-full ${isVertical ? "right-4 top-[calc(2.75rem+env(safe-area-inset-top,0px))] border border-white/20 bg-white/10 backdrop-blur-sm" : "left-4 top-[calc(1rem+env(safe-area-inset-top,0px))] border border-white/15 bg-black/40"}`}
+      className={`absolute z-50 grid h-11 w-11 place-items-center rounded-full ${isVertical ? "right-4 top-[calc(2rem+env(safe-area-inset-top,0px))] border border-white/20 bg-white/10 backdrop-blur-sm" : "left-4 top-[calc(1rem+env(safe-area-inset-top,0px))] border border-white/15 bg-black/40"}`}
       whileTap={{ scale: 0.9 }}
       whileHover={{ rotate: 180 }}
       aria-label={isVertical ? "Open live camera" : "Close live camera"}

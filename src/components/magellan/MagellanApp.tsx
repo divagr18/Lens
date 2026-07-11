@@ -52,6 +52,7 @@ export function MagellanApp() {
     gameRequest,
     sendGameContext,
     switchCamera,
+    historicalVideoRequest,
     translationRequest,
     start: startLive,
     status: liveStatus,
@@ -189,6 +190,7 @@ export function MagellanApp() {
             captureStill={captureStill}
             onValidateTreasure={validateTreasureCapture}
             targetLanguage={translationRequest?.targetLanguage || translationLanguage}
+            historicalVideoRequest={historicalVideoRequest}
             voiceBubble={<VoiceBubble stream={mediaStream ?? null} className="pointer-events-none absolute bottom-5 left-5 z-[2]" />}
           />
         }

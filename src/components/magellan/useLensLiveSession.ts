@@ -16,6 +16,7 @@ type SocketMessage =
   | { type: "interrupted" }
   | { type: "tool-status"; message: string }
   | { type: "visual-translation-request"; targetLanguage?: string }
+  | { type: "historical-video-request"; topic: string; context?: string }
   | { type: "city-game-request"; city?: string }
   | { type: "memory-status"; message: string }
   | { type: "error"; code: string; message: string }
@@ -34,6 +35,7 @@ export function useLensLiveSession({
   const [isReady, setIsReady] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream>();
   const [translationRequest, setTranslationRequest] = useState<{ id: string; targetLanguage?: string }>();
+  const [historicalVideoRequest, setHistoricalVideoRequest] = useState<{ id: string; topic: string; context?: string }>();
   const [gameRequest, setGameRequest] = useState<{ id: string; city?: string }>();
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -207,6 +209,10 @@ export function useLensLiveSession({
       setTranslationRequest({ id: crypto.randomUUID(), targetLanguage: message.targetLanguage });
       return;
     }
+    if (message.type === "historical-video-request") {
+      setHistoricalVideoRequest({ id: crypto.randomUUID(), topic: message.topic, context: message.context });
+      return;
+    }
     if (message.type === "city-game-request") {
       setGameRequest({ id: crypto.randomUUID(), city: message.city });
       return;
@@ -343,6 +349,7 @@ export function useLensLiveSession({
     captureStill,
     sendGameContext,
     translationRequest,
+    historicalVideoRequest,
     gameRequest,
   };
 }
