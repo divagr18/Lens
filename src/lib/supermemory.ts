@@ -62,10 +62,14 @@ export async function addTripToMemory(trip: TripProfile) {
     content,
     source: "user-entered",
     tags: ["constraint", "booking", "place", "food", "route"],
-  });
+  }, `lens-trip-profile:${trip.id}`);
 }
 
-export async function addMemoryToTrip(trip: TripProfile, input: AddMemoryInput) {
+export async function addMemoryToTrip(
+  trip: TripProfile,
+  input: AddMemoryInput,
+  customId?: string
+) {
   const headers = supermemoryHeaders();
   if (!headers) {
     return {
@@ -81,7 +85,7 @@ export async function addMemoryToTrip(trip: TripProfile, input: AddMemoryInput) 
     method: "POST",
     headers,
     body: JSON.stringify({
-      customId: `${trip.id}-${input.source}-${Date.now()}`,
+      customId: customId ?? `${trip.id}-${input.source}-${Date.now()}`,
       content: input.content,
       metadata: {
         source: input.source,
@@ -148,8 +152,21 @@ export async function queryTripContext(
   }
 
   const data = (await res.json()) as SupermemoryProfileResponse;
+  const profileResponse = await fetch(`${SUPERMEMORY_BASE_URL}/v4/profile`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      containerTag: `user:${trip.userId}`,
+      q,
+      threshold: 0.55,
+      include: ["static", "dynamic"],
+    }),
+  });
+  const profileData = profileResponse.ok
+    ? ((await profileResponse.json()) as SupermemoryProfileResponse)
+    : undefined;
   const memories =
-    data.searchResults?.results?.flatMap((result) => {
+    [data, profileData].flatMap((context) => context?.searchResults?.results ?? []).flatMap((result) => {
       if (result.memory) return [result.memory];
       return result.chunks?.map((chunk) => chunk.content ?? "").filter(Boolean) ?? [];
     }) ?? [];
@@ -159,8 +176,8 @@ export async function queryTripContext(
     status: "ready",
     query: q,
     containerTags: tripContainerTags(trip),
-    profileStatic: data.profile?.static ?? [],
-    profileDynamic: data.profile?.dynamic ?? [],
+    profileStatic: [...(profileData?.profile?.static ?? []), ...(data.profile?.static ?? [])],
+    profileDynamic: [...(profileData?.profile?.dynamic ?? []), ...(data.profile?.dynamic ?? [])],
     memories,
     message: "Supermemory context retrieved.",
   };
