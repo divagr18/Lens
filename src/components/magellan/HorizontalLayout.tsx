@@ -160,7 +160,7 @@ export function HorizontalLayout({
       </div>
 
       <aside className="pointer-events-none absolute bottom-4 right-4 top-4 z-10 flex w-[28%] min-w-[14rem] max-w-[24rem] flex-col overflow-hidden rounded-[36px]">
-        <div className="pointer-events-auto min-h-0 flex-1 overflow-hidden rounded-[36px]">{glassPanel}</div>
+        <div className="glass-panel pointer-events-auto min-h-0 flex-1 overflow-hidden rounded-[36px]">{glassPanel}</div>
       </aside>
 
       <div className="absolute bottom-7 left-7 z-20 flex flex-col items-center">
@@ -217,7 +217,18 @@ export function HorizontalLayout({
           </motion.div>
         )}
 
-        {historicalVideo !== "idle" && (
+        {historicalVideo === "loading" ? (
+          <motion.div
+            className="absolute bottom-5 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-[#15141a]/78 px-3 py-1.5 text-[0.7rem] text-white/80 shadow-lg backdrop-blur-xl"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            aria-live="polite"
+          >
+            <Loader2 className="animate-spin text-[#b9adff]" size={13} />
+            Creating TimeLens scene
+          </motion.div>
+        ) : historicalVideo !== "idle" ? (
           <motion.section
             className="absolute bottom-6 left-1/2 z-30 w-[min(25rem,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.7rem] border border-white/30 bg-[#15141a]/92 text-white shadow-[0_20px_60px_rgba(0,0,0,0.48)] backdrop-blur-2xl"
             initial={{ opacity: 0, y: 18, scale: 0.96 }}
@@ -230,15 +241,11 @@ export function HorizontalLayout({
             <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
               <div>
                 <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[#b9adff]">TimeLens reconstruction</p>
-                <h2 className="mt-1 text-base font-semibold leading-tight">{historicalVideo === "loading" ? "Reconstructing this moment…" : historicalVideoResult?.title}</h2>
+                <h2 className="mt-1 text-base font-semibold leading-tight">{historicalVideoResult?.title}</h2>
               </div>
-              {historicalVideo !== "loading" && <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white/80 hover:bg-white/20" onClick={() => setDismissedHistoricalVideoId(historicalVideoRequest?.id)} aria-label="Close historical reconstruction"><X size={16} /></button>}
+              <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white/80 hover:bg-white/20" onClick={() => setDismissedHistoricalVideoId(historicalVideoRequest?.id)} aria-label="Close historical reconstruction"><X size={16} /></button>
             </div>
-            {historicalVideo === "loading" ? (
-              <div className="flex aspect-video items-center justify-center gap-3 bg-black/35 text-sm text-white/75">
-                <Loader2 className="animate-spin" size={21} /> Creating an illustrative scene
-              </div>
-            ) : historicalVideo === "ready" && historicalVideoResult?.videoDataUrl ? (
+            {historicalVideo === "ready" && historicalVideoResult?.videoDataUrl ? (
               <video className="aspect-video w-full bg-black object-cover" src={historicalVideoResult.videoDataUrl} autoPlay muted playsInline controls preload="metadata" />
             ) : (
               <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-black/35 px-5 text-center text-sm text-white/75">
@@ -246,14 +253,12 @@ export function HorizontalLayout({
                 <span>{historicalVideoResult?.fallbackMessage || "The reconstruction was unavailable."}</span>
               </div>
             )}
-            {historicalVideo !== "loading" && (
-              <div className="space-y-1 px-4 py-3">
-                <p className="text-xs leading-5 text-white/80">{historicalVideoResult?.summary}</p>
-                <p className="text-[0.64rem] leading-4 text-white/45">{historicalVideoResult?.disclaimer}</p>
-              </div>
-            )}
+            <div className="space-y-1 px-4 py-3">
+              <p className="text-xs leading-5 text-white/80">{historicalVideoResult?.summary}</p>
+              <p className="text-[0.64rem] leading-4 text-white/45">{historicalVideoResult?.disclaimer}</p>
+            </div>
           </motion.section>
-        )}
+        ) : null}
 
         {gameNotice && (
           <motion.div className={`game-notice game-notice--${gameNotice.tone}`} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>

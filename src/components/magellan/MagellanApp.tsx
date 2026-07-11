@@ -20,6 +20,7 @@ export function MagellanApp() {
   const setIsGenerating = useMagellanStore((state) => state.setIsGenerating);
   const setOrientation = useMagellanStore((state) => state.setOrientation);
   const replaceTrips = useMagellanStore((state) => state.replaceTrips);
+  const messages = useMagellanStore((state) => state.messages);
   const hasStartedChat = useMagellanStore((state) => state.messages.length > 0);
   const activeTripId = useMagellanStore((state) => state.activeTripId);
   const facingMode = useMagellanStore((state) => state.facingMode);
@@ -29,7 +30,6 @@ export function MagellanApp() {
   const setGameNotice = useMagellanStore((state) => state.setGameNotice);
   const [tripProfiles] = useState<TripProfile[]>(() => loadSavedTrips());
   const videoRef = useRef<HTMLVideoElement>(null);
-  const queuedTextRef = useRef<string | undefined>(undefined);
   const gameRequestRef = useRef<string | undefined>(undefined);
   const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
 
@@ -47,7 +47,6 @@ export function MagellanApp() {
   const {
     isReady: liveIsReady,
     mediaStream,
-    sendText: sendLiveText,
     captureStill,
     gameRequest,
     sendGameContext,
@@ -118,23 +117,31 @@ export function MagellanApp() {
   }, [liveIsReady, setOrientation, startLive, stopLive]);
 
   const handleSend = useCallback(
-    (text: string) => {
-      addMessage({ id: crypto.randomUUID(), role: "user", content: text });
-      if (sendLiveText(text)) return;
-      queuedTextRef.current = text;
+    async (text: string) => {
+      const userMessage = { id: crypto.randomUUID(), role: "user" as const, content: text };
+      addMessage(userMessage);
       setIsGenerating(true);
-      setOrientation("horizontal");
-      void startLive();
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history: [...messages, userMessage], trip: activeTrip }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { answer?: string; error?: string };
+        if (!response.ok || !body.answer) throw new Error(body.error || "Chat could not respond.");
+        addMessage({ id: crypto.randomUUID(), role: "assistant", content: body.answer });
+      } catch (error) {
+        addMessage({
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: error instanceof Error ? `I couldn't reply just now: ${error.message}` : "I couldn't reply just now.",
+        });
+      } finally {
+        setIsGenerating(false);
+      }
     },
-    [addMessage, sendLiveText, setIsGenerating, setOrientation, startLive]
+    [activeTrip, addMessage, messages, setIsGenerating]
   );
-
-  useEffect(() => {
-    const queuedText = queuedTextRef.current;
-    if (!liveIsReady || !queuedText) return;
-    queuedTextRef.current = undefined;
-    sendLiveText(queuedText);
-  }, [liveIsReady, sendLiveText]);
 
   useEffect(() => {
     if (cityGame && cityGame.city.toLowerCase() === gameCity.toLowerCase()) return;
@@ -174,6 +181,9 @@ export function MagellanApp() {
         onFlipCamera={switchCamera}
         onOpenLive={() => {
           if (!liveIsReady) void startLive();
+        }}
+        onCloseLive={() => {
+          if (liveIsReady) stopLive("Live camera closed.");
         }}
         vertical={
           <VerticalLayout

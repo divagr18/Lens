@@ -6,13 +6,14 @@ import { useMagellanStore } from "./store";
 
 type LockableOrientation = ScreenOrientation & { lock?: (orientation: "landscape") => Promise<void> };
 
-export function RotationToggle({ orientation, onOpenLive }: { orientation: "vertical" | "horizontal"; onOpenLive?: () => void }) {
+export function RotationToggle({ orientation, onOpenLive, onCloseLive }: { orientation: "vertical" | "horizontal"; onOpenLive?: () => void; onCloseLive?: () => void }) {
   const setOrientation = useMagellanStore((state) => state.setOrientation);
   const isVertical = orientation === "vertical";
   const handleToggle = useCallback(() => {
     const next = isVertical ? "horizontal" : "vertical";
     setOrientation(next);
     if (next === "horizontal") onOpenLive?.();
+    if (next === "vertical") onCloseLive?.();
     if (next === "horizontal" && document.fullscreenEnabled) {
       void document.documentElement.requestFullscreen?.().then(() =>
         (screen.orientation as LockableOrientation | undefined)?.lock?.("landscape")
@@ -22,7 +23,7 @@ export function RotationToggle({ orientation, onOpenLive }: { orientation: "vert
       void document.exitFullscreen?.();
     }
     acknowledge();
-  }, [isVertical, onOpenLive, setOrientation]);
+  }, [isVertical, onCloseLive, onOpenLive, setOrientation]);
   return (
     <motion.button
       onClick={handleToggle}

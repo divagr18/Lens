@@ -85,7 +85,7 @@ const liveMapsTools = [
       {
         name: "generate_historical_scene",
         description:
-          "Use only when the traveler explicitly asks for a short visual reconstruction or video about a historical event, battle, monument, or site. This starts a separate phone-side generation and does not delay the Live conversation.",
+          "Use only when the traveler explicitly asks for a short visual reconstruction or video about a historical event, battle, monument, or site. The request can be made from anywhere; do not require GPS, a known monument, a camera confirmation, or a specific trip location. This starts a separate phone-side generation and does not delay the Live conversation.",
         parametersJsonSchema: {
           type: "object",
           additionalProperties: false,
@@ -795,7 +795,7 @@ function buildLiveSystemInstruction(tripMemory) {
     "When asked about weather, rain, heat, an umbrella, or timing, use the weather tool before answering.",
     "When asked for the current date or time, whether to leave now, or another time-sensitive decision, use get_current_time instead of assuming the date or time.",
     "When the traveler asks to translate what is visible, use translate_visible_text. Briefly say you are preparing a translated copy, then let the phone show it; never claim the generated image is authoritative over the original.",
-    "When the traveler explicitly asks to see a historical event, battle, monument story, or reconstruction as a short video, use generate_historical_scene. Briefly say that you are creating an illustrative reconstruction, not historical footage, then call the tool. Do not call it for a normal spoken historical explanation.",
+    "When the traveler explicitly asks to see a historical event, battle, monument story, or reconstruction as a short video, use generate_historical_scene. This request is valid from anywhere: never require that they be at a particular monument, city, GPS location, or camera view. Use the event/site they name or describe as the topic. Briefly say that you are creating an illustrative reconstruction, not historical footage, then call the tool. Do not call it for a normal spoken historical explanation.",
     "When the traveler asks for a city game or visual scavenger hunt, use start_city_game. The game must stay a safe public visual activity and must not require purchases, risky movement, private access, or photos of people.",
     "A city treasure hunt may be active. The phone sends its current score and remaining targets as silent context updates. Retain that state for the whole session; use get_city_game_status for a fresh answer when asked what remains or what to find next.",
     "Use get_traveler_memory when saved preferences, corrections, or trip details could materially change the answer and the initial memory is insufficient.",

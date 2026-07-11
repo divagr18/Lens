@@ -79,6 +79,7 @@ function buildHistoricalVideoPrompt(topic: string, context: string) {
     "Create a short vertical historical reconstruction for a travel companion app.",
     `Subject: ${topic}.`,
     context ? `Traveler context: ${context}.` : "Traveler context: the traveler is viewing a historical place and asked for a visual explanation.",
+    "The traveler can request this from anywhere. Do not require, depict, or infer that they are currently at a particular monument, city, or GPS location.",
     "Use a respectful museum-documentary style. Show a clear sense of period, terrain, formations, and camera movement that helps explain the event.",
     "This is an illustrative reconstruction, not archival footage. Avoid factual claims in on-screen text and do not invent dates, quotes, named people, uniforms, flags, or tactics when uncertain.",
     "Depict conflict non-graphically: no gore, injuries, corpses, executions, cruelty, or close-up violence. Do not glorify war or portray present-day political groups.",
