@@ -256,6 +256,34 @@ export function useLensLiveSession({
     return true;
   }, [sendJson, setIsGenerating]);
 
+  const switchCamera = useCallback(async (nextFacingMode: "user" | "environment") => {
+    const liveStream = streamRef.current;
+    if (!liveStream || !navigator.mediaDevices?.getUserMedia) return;
+    try {
+      const replacement = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: nextFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      const nextTrack = replacement.getVideoTracks()[0];
+      if (!nextTrack || streamRef.current !== liveStream) {
+        replacement.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      liveStream.getVideoTracks().forEach((track) => {
+        liveStream.removeTrack(track);
+        track.stop();
+      });
+      liveStream.addTrack(nextTrack);
+      if (videoRef.current) {
+        videoRef.current.srcObject = liveStream;
+        await videoRef.current.play();
+      }
+      setStatus(nextFacingMode === "environment" ? "Rear camera ready." : "Front camera ready.");
+    } catch {
+      setStatus("Could not switch cameras. Keep the current camera pointed at what matters.");
+    }
+  }, [videoRef]);
+
   useEffect(() => () => stop("Live view closed."), [stop]);
 
   return {
@@ -265,6 +293,7 @@ export function useLensLiveSession({
     start,
     stop,
     sendText,
+    switchCamera,
   };
 }
 

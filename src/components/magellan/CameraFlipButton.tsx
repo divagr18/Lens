@@ -2,14 +2,16 @@ import { motion } from "framer-motion";
 import { acknowledge } from "./acknowledge";
 import { useMagellanStore } from "./store";
 
-export function CameraFlipButton() {
+export function CameraFlipButton({ onFlip }: { onFlip?: (nextFacingMode: "user" | "environment") => void }) {
   const facingMode = useMagellanStore((state) => state.facingMode);
   const toggleFacingMode = useMagellanStore((state) => state.toggleFacingMode);
   return (
     <motion.button
       onClick={() => {
         acknowledge();
+        const nextFacingMode = facingMode === "environment" ? "user" : "environment";
         toggleFacingMode();
+        onFlip?.(nextFacingMode);
       }}
       className="absolute left-4 top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-50 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/40"
       whileTap={{ scale: 0.9 }}

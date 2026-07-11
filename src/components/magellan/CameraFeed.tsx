@@ -11,7 +11,7 @@ export function CameraFeed({ videoRef, stream, status }: { videoRef: RefObject<H
     void videoRef.current.play();
   }, [stream, videoRef]);
   if (!stream) {
-    return <div className="absolute inset-0 grid place-items-center bg-[#0d0d0f]"><p className="max-w-xs rounded-3xl border border-white/10 bg-black/50 p-6 text-center text-sm text-white/70">{status}</p></div>;
+    return <div className="absolute inset-0 grid place-items-center bg-charcoal"><p className="glass-panel mx-4 max-w-xs rounded-3xl p-6 text-center text-sm text-text-secondary">{status}</p></div>;
   }
   return <motion.video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} />;
 }

@@ -6,10 +6,11 @@ import type { ReactNode } from "react";
 import { acknowledge } from "./acknowledge";
 import { CameraFlipButton } from "./CameraFlipButton";
 import { ChatHistoryDrawer } from "./ChatHistoryDrawer";
+import { ConnectionBadge } from "./ConnectionBadge";
 import { RotationToggle } from "./RotationToggle";
 import { useMagellanStore } from "./store";
 
-export function OrientationGuard({ vertical, horizontal }: { vertical: ReactNode; horizontal: ReactNode }) {
+export function OrientationGuard({ vertical, horizontal, onFlipCamera }: { vertical: ReactNode; horizontal: ReactNode; onFlipCamera?: (nextFacingMode: "user" | "environment") => void }) {
   const orientation = useMagellanStore((state) => state.orientation);
   const isScrollingDown = useMagellanStore((state) => state.isScrollingDown);
   const setChatHistoryOpen = useMagellanStore((state) => state.setChatHistoryOpen);
@@ -37,10 +38,11 @@ export function OrientationGuard({ vertical, horizontal }: { vertical: ReactNode
       ) : (
         <>
           <RotationToggle orientation={orientation} />
-          <CameraFlipButton />
+          <CameraFlipButton onFlip={onFlipCamera} />
         </>
       )}
       <ChatHistoryDrawer />
+      <ConnectionBadge orientation={orientation} />
       <motion.div
         key={orientation}
         className="absolute inset-0"

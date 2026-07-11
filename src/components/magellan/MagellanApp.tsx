@@ -5,12 +5,15 @@ import { loadActiveTripId, loadSavedTrips } from "@/lib/trip-registry";
 import type { TripProfile } from "@/lib/travel-types";
 import { ChatThread } from "./ChatThread";
 import { CameraFeed } from "./CameraFeed";
+import { GlassPanel } from "./GlassPanel";
 import { HorizontalLayout } from "./HorizontalLayout";
 import { InputBar } from "./InputBar";
 import { OrientationGuard } from "./OrientationGuard";
 import { useMagellanStore } from "./store";
 import { useLensLiveSession } from "./useLensLiveSession";
+import { useWakeLock } from "./useWakeLock";
 import { VerticalLayout } from "./VerticalLayout";
+import { VoiceBubble } from "./VoiceBubble";
 
 export function MagellanApp() {
   const addMessage = useMagellanStore((state) => state.addMessage);
@@ -23,6 +26,7 @@ export function MagellanApp() {
   const [tripProfiles] = useState<TripProfile[]>(() => loadSavedTrips());
   const videoRef = useRef<HTMLVideoElement>(null);
   const queuedTextRef = useRef<string | undefined>(undefined);
+  const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
 
   useEffect(() => {
     if (!tripProfiles.length) return;
@@ -38,6 +42,7 @@ export function MagellanApp() {
     isReady: liveIsReady,
     mediaStream,
     sendText: sendLiveText,
+    switchCamera,
     start: startLive,
     status: liveStatus,
     stop: stopLive,
@@ -71,9 +76,18 @@ export function MagellanApp() {
     sendLiveText(queuedText);
   }, [liveIsReady, sendLiveText]);
 
+  useEffect(() => {
+    if (liveIsReady) {
+      void requestWakeLock();
+      return;
+    }
+    void releaseWakeLock();
+  }, [liveIsReady, releaseWakeLock, requestWakeLock]);
+
   return (
     <main className="magellan-root">
       <OrientationGuard
+        onFlipCamera={switchCamera}
         vertical={
           <VerticalLayout
             className={hasStartedChat ? "magellan-shell magellan-shell--chatting" : "magellan-shell"}
@@ -84,8 +98,9 @@ export function MagellanApp() {
         horizontal={
           <HorizontalLayout
             cameraFeed={<CameraFeed videoRef={videoRef} stream={mediaStream} status={liveStatus} />}
-            glassPanel={<ChatThread compact />}
+            glassPanel={<GlassPanel className="h-full overflow-hidden p-0"><ChatThread compact /></GlassPanel>}
             onToggleVoice={toggleLive}
+            voiceBubble={<VoiceBubble stream={mediaStream ?? null} className="pointer-events-none absolute bottom-5 left-5 z-[2]" />}
           />
         }
       />
